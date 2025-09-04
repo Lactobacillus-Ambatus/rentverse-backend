@@ -428,4 +428,101 @@ router.get('/me', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/check-email:
+ *   post:
+ *     summary: Check if email exists in the system
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address to check
+ *     responses:
+ *       200:
+ *         description: Email check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     exists:
+ *                       type: boolean
+ *                       description: Whether the email exists in the system
+ *                     isActive:
+ *                       type: boolean
+ *                       description: Whether the account is active (only returned if exists is true)
+ *                     role:
+ *                       type: string
+ *                       description: User role (only returned if exists is true)
+ *       400:
+ *         description: Bad request - Invalid email format
+ */
+router.post(
+  '/check-email',
+  [body('email').isEmail().normalizeEmail()],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+      }
+
+      const { email } = req.body;
+
+      // Find user by email
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          isActive: true,
+          role: true,
+        },
+      });
+
+      if (!user) {
+        return res.json({
+          success: true,
+          data: {
+            exists: false,
+          },
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          exists: true,
+          isActive: user.isActive,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error('Check email error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+);
+
 module.exports = router;

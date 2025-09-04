@@ -37,9 +37,9 @@ app.use(
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const propertyRoutes = require('./routes/properties');
-const bookingRoutes = require('./routes/bookings');
+const userRoutes = require('./modules/users/users.routes');
+const propertyRoutes = require('./modules/properties/properties.routes');
+const bookingRoutes = require('./modules/bookings/bookings.routes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
