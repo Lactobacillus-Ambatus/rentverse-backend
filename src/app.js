@@ -37,12 +37,14 @@ app.use(
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const uploadRoutes = require('./routes/upload');
 const userRoutes = require('./modules/users/users.routes');
 const propertyRoutes = require('./modules/properties/properties.routes');
 const bookingRoutes = require('./modules/bookings/bookings.routes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);
