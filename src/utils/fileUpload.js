@@ -108,7 +108,7 @@ class FileUploadService {
   }
 
   /**
-   * Upload file to Supabase Storage
+   * Upload file to S3-compatible storage
    */
   async uploadFile(file, folder = 'general', optimize = true) {
     try {
