@@ -78,13 +78,27 @@ class FileUploadService {
         format = 'jpeg',
       } = options;
 
-      const optimized = await sharp(buffer)
+      let transformer = sharp(buffer)
         .resize(width, height, {
           fit: 'inside',
           withoutEnlargement: true,
-        })
-        .jpeg({ quality })
-        .toBuffer();
+        });
+      switch (format) {
+        case 'png':
+          transformer = transformer.png({ quality });
+          break;
+        case 'webp':
+          transformer = transformer.webp({ quality });
+          break;
+        case 'jpeg':
+        case 'jpg':
+          transformer = transformer.jpeg({ quality });
+          break;
+        default:
+          transformer = transformer.jpeg({ quality }); // fallback to jpeg
+          break;
+      }
+      const optimized = await transformer.toBuffer();
 
       return optimized;
     } catch (error) {
