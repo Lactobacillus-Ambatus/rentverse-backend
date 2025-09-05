@@ -247,17 +247,123 @@ router.get('/property/:code', propertiesController.getPropertyByCode);
 
 /**
  * @swagger
- * /api/properties/{id}:
+ * /properties.geojson:
  *   get:
- *     summary: Get property by ID (admin access)
+ *     summary: Get property data in GeoJSON format for high-performance map rendering
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: query
+ *         name: bbox
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Bounding box in format "minLng,minLat,maxLng,maxLat"
+ *         example: "106.7,-6.3,106.9,-6.1"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 1000
+ *           default: 1000
+ *         description: Maximum number of properties to return
+ *       - in: query
+ *         name: clng
+ *         schema:
+ *           type: number
+ *         description: Center longitude for distance-based sorting
+ *       - in: query
+ *         name: clat
+ *         schema:
+ *           type: number
+ *         description: Center latitude for distance-based sorting
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query for title or location
+ *     responses:
+ *       200:
+ *         description: GeoJSON FeatureCollection of properties
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 type:
+ *                   type: string
+ *                   example: "FeatureCollection"
+ *                 features:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type:
+ *                         type: string
+ *                         example: "Feature"
+ *                       geometry:
+ *                         type: object
+ *                         properties:
+ *                           type:
+ *                             type: string
+ *                             example: "Point"
+ *                           coordinates:
+ *                             type: array
+ *                             items:
+ *                               type: number
+ *                             example: [106.8, -6.2]
+ *                       properties:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           code:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           currencyCode:
+ *                             type: string
+ *                           priceFormatted:
+ *                             type: string
+ *                           bedrooms:
+ *                             type: integer
+ *                           bathrooms:
+ *                             type: integer
+ *                           areaSqm:
+ *                             type: number
+ *                           propertyType:
+ *                             type: string
+ *                           city:
+ *                             type: string
+ *                           furnished:
+ *                             type: boolean
+ *                           isAvailable:
+ *                             type: boolean
+ *                           thumbnail:
+ *                             type: string
+ *                             nullable: true
+ *       400:
+ *         description: Invalid bounding box parameter
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/geojson', propertiesController.getGeoJSON);
+
+/**
+ * @swagger
+ * /properties/{id}:
+ *   get:
+ *     summary: Get property by ID
  *     tags: [Properties]
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: UUID of the property to get
+ *         description: Property ID
  *     responses:
  *       200:
  *         description: Property details
@@ -275,6 +381,8 @@ router.get('/property/:code', propertiesController.getPropertyByCode);
  *                       $ref: '#/components/schemas/Property'
  *       404:
  *         description: Property not found
+ *       500:
+ *         description: Internal server error
  */
 router.get('/:id', propertiesController.getPropertyById);
 

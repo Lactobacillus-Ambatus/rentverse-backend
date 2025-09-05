@@ -138,9 +138,41 @@ Server akan berjalan di `http://localhost:3000`
 
 - `GET /api/properties` - Get all properties (with filters)
 - `GET /api/properties/:id` - Get property by ID
+- `GET /api/properties/geojson` - **🗺️ Get properties in GeoJSON format for maps**
 - `POST /api/properties` - Create new property (Landlord/Admin)
 - `PUT /api/properties/:id` - Update property
 - `DELETE /api/properties/:id` - Delete property
+
+#### 🗺️ GeoJSON Map Endpoint
+
+**High-performance endpoint for map integration:**
+
+```bash
+GET /api/properties/geojson?bbox=minLng,minLat,maxLng,maxLat[&limit=1000][&clng=][&clat=][&q=]
+```
+
+**Parameters:**
+
+- `bbox` (required): Bounding box "minLng,minLat,maxLng,maxLat"
+- `limit` (optional): Max properties (1-1000, default: 1000)
+- `clng,clat` (optional): Center coordinates for distance sorting
+- `q` (optional): Search query
+
+**Example:**
+
+```bash
+curl "http://localhost:3000/api/properties/geojson?bbox=106.7,-6.3,106.9,-6.1&limit=100"
+```
+
+**Features:**
+
+- ⚡ Raw SQL queries for maximum performance
+- 🎯 PostGIS geometry support for spatial queries
+- 📍 Distance-based sorting from center point
+- 🔍 Full-text search on title/city/address
+- 🎨 GeoJSON format ready for Leaflet/Mapbox
+- 💰 Pre-formatted price display
+- 🖼️ Thumbnail image included
 
 ### Booking Endpoints
 

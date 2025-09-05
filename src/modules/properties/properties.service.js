@@ -278,6 +278,97 @@ class PropertiesService {
     await propertiesRepository.delete(id);
     return { message: 'Property deleted successfully' };
   }
+
+  async getGeoJSON(params) {
+    try {
+      const {
+        minLng,
+        minLat,
+        maxLng,
+        maxLat,
+        limit,
+        centerLng,
+        centerLat,
+        query,
+      } = params;
+
+      const properties = await propertiesRepository.findForGeoJSON({
+        minLng,
+        minLat,
+        maxLng,
+        maxLat,
+        limit,
+        centerLng,
+        centerLat,
+        query,
+      });
+
+      // Transform to GeoJSON format
+      const features = properties.map(property => {
+        // Format price for display
+        const formattedPrice = this.formatPrice(
+          property.price,
+          property.currencyCode
+        );
+
+        // Handle thumbnail - either from raw query result or from images array
+        let thumbnail = null;
+        if (property.thumbnail) {
+          thumbnail = property.thumbnail;
+        } else if (property.images && property.images.length > 0) {
+          thumbnail = property.images[0];
+        }
+
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [
+              parseFloat(property.longitude),
+              parseFloat(property.latitude),
+            ],
+          },
+          properties: {
+            id: property.id,
+            code: property.code,
+            title: property.title,
+            price: parseFloat(property.price),
+            currencyCode: property.currencyCode,
+            priceFormatted: formattedPrice,
+            bedrooms: property.bedrooms,
+            bathrooms: property.bathrooms,
+            areaSqm: property.areaSqm ? parseFloat(property.areaSqm) : null,
+            propertyType: property.propertyType?.name || property.propertyType, // Handle both object and string
+            city: property.city,
+            furnished: property.furnished,
+            isAvailable: property.isAvailable,
+            thumbnail,
+          },
+        };
+      });
+
+      return {
+        type: 'FeatureCollection',
+        features,
+      };
+    } catch (error) {
+      console.error('Error in getGeoJSON service:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to format price
+  formatPrice(price, currencyCode = 'IDR') {
+    const numPrice = parseFloat(price);
+
+    if (currencyCode === 'IDR') {
+      return `Rp ${numPrice.toLocaleString('id-ID')}`;
+    } else if (currencyCode === 'USD') {
+      return `$${numPrice.toLocaleString('en-US')}`;
+    } else {
+      return `${currencyCode} ${numPrice.toLocaleString()}`;
+    }
+  }
 }
 
 module.exports = new PropertiesService();
