@@ -137,7 +137,7 @@ router.post(
           password: hashedPassword,
           name,
           phone: phone || null,
-          role: 'USER',
+          role: 'TENANT',
         },
         select: {
           id: true,
@@ -348,6 +348,7 @@ router.post(
       );
 
       // Remove password from response
+      // eslint-disable-next-line no-unused-vars
       const { password: _, ...userWithoutPassword } = user;
 
       res.json({

@@ -27,11 +27,15 @@ const router = express.Router();
  *           description: The phone number of the user
  *         role:
  *           type: string
- *           enum: [USER, LANDLORD, ADMIN]
+ *           enum: [TENANT, LANDLORD, ADMIN]
  *           description: The role of the user
  *         isActive:
  *           type: boolean
  *           description: Whether the user is active
+ *         verifiedAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the user was verified
  *         createdAt:
  *           type: string
  *           format: date-time

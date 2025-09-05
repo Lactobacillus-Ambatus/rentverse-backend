@@ -15,6 +15,9 @@ const router = express.Router();
  *         id:
  *           type: string
  *           description: The auto-generated UUID of the property
+ *         code:
+ *           type: string
+ *           description: The unique code of the property
  *         title:
  *           type: string
  *           description: The title of the property
@@ -30,40 +33,68 @@ const router = express.Router();
  *         state:
  *           type: string
  *           description: The state where the property is located
+ *         country:
+ *           type: string
+ *           description: The country where the property is located
  *         zipCode:
  *           type: string
  *           description: The zip code of the property
+ *         placeId:
+ *           type: string
+ *           description: Google Places ID
+ *         latitude:
+ *           type: number
+ *           format: float
+ *           description: Latitude coordinate
+ *         longitude:
+ *           type: number
+ *           format: float
+ *           description: Longitude coordinate
+ *         mapsUrl:
+ *           type: string
+ *           nullable: true
+ *           description: Google Maps URL generated from latitude and longitude (null if coordinates not available)
  *         price:
  *           type: number
  *           format: decimal
  *           description: The monthly rent price
- *         type:
+ *         currencyCode:
  *           type: string
- *           enum: [APARTMENT, HOUSE, STUDIO, CONDO, VILLA, ROOM]
- *           description: The type of property
+ *           description: Currency code (e.g., IDR, USD)
  *         bedrooms:
  *           type: integer
  *           description: Number of bedrooms
  *         bathrooms:
  *           type: integer
  *           description: Number of bathrooms
- *         area:
+ *         areaSqm:
  *           type: number
  *           format: float
- *           description: Area in square feet
+ *           description: Area in square meters
+ *         furnished:
+ *           type: boolean
+ *           description: Whether the property is furnished
  *         isAvailable:
  *           type: boolean
  *           description: Whether the property is available for rent
+ *         status:
+ *           type: string
+ *           enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED]
+ *           description: The listing status
  *         images:
  *           type: array
  *           items:
  *             type: string
  *           description: Array of image URLs
+ *         propertyType:
+ *           $ref: '#/components/schemas/PropertyType'
  *         amenities:
  *           type: array
  *           items:
- *             type: string
+ *             $ref: '#/components/schemas/Amenity'
  *           description: Array of amenities
+ *         owner:
+ *           $ref: '#/components/schemas/User'
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -72,10 +103,9 @@ const router = express.Router();
  *           type: string
  *           format: date-time
  *           description: The date the property was last updated
- *         owner:
- *           $ref: '#/components/schemas/User'
  *       example:
  *         id: "123e4567-e89b-12d3-a456-426614174000"
+ *         code: "APT001"
  *         title: Beautiful Downtown Apartment
  *         description: A stunning 2-bedroom apartment in the heart of the city
  *         address: 123 Main St
@@ -184,9 +214,42 @@ router.get('/', propertiesController.getAllProperties);
 
 /**
  * @swagger
+ * /api/properties/property/{code}:
+ *   get:
+ *     summary: Get property by code/slug (public access)
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Code/slug of the property to get
+ *     responses:
+ *       200:
+ *         description: Property details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     property:
+ *                       $ref: '#/components/schemas/Property'
+ *       404:
+ *         description: Property not found
+ */
+router.get('/property/:code', propertiesController.getPropertyByCode);
+
+/**
+ * @swagger
  * /api/properties/{id}:
  *   get:
- *     summary: Get property by ID
+ *     summary: Get property by ID (admin access)
  *     tags: [Properties]
  *     parameters:
  *       - in: path
@@ -236,42 +299,86 @@ router.get('/:id', propertiesController.getPropertyById);
  *               - state
  *               - zipCode
  *               - price
- *               - type
+ *               - propertyTypeId
  *             properties:
+ *               code:
+ *                 type: string
+ *                 description: Property code (auto-generated if not provided)
  *               title:
  *                 type: string
+ *                 description: Property title
  *               description:
  *                 type: string
+ *                 description: Property description
  *               address:
  *                 type: string
+ *                 description: Property address
  *               city:
  *                 type: string
+ *                 description: City
  *               state:
  *                 type: string
+ *                 description: State/Province
+ *               country:
+ *                 type: string
+ *                 description: Country code (default ID)
  *               zipCode:
  *                 type: string
+ *                 description: Postal code
+ *               placeId:
+ *                 type: string
+ *                 description: Google Places ID
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 description: Latitude coordinate
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 description: Longitude coordinate
  *               price:
  *                 type: number
- *               type:
+ *                 format: decimal
+ *                 description: Monthly rent price
+ *               currencyCode:
  *                 type: string
- *                 enum: [APARTMENT, HOUSE, STUDIO, CONDO, VILLA, ROOM]
+ *                 description: Currency code (default IDR)
+ *               propertyTypeId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Property type ID
  *               bedrooms:
  *                 type: integer
+ *                 description: Number of bedrooms
  *               bathrooms:
  *                 type: integer
- *               area:
+ *                 description: Number of bathrooms
+ *               areaSqm:
  *                 type: number
+ *                 format: float
+ *                 description: Area in square meters
+ *               furnished:
+ *                 type: boolean
+ *                 description: Whether property is furnished
  *               isAvailable:
  *                 type: boolean
  *                 default: true
+ *                 description: Whether property is available
+ *               status:
+ *                 type: string
+ *                 enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED]
+ *                 description: Listing status
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
- *               amenities:
+ *                 description: Array of image URLs
+ *               amenityIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                   format: uuid
+ *                 description: Array of amenity IDs
  *     responses:
  *       201:
  *         description: Property created successfully
@@ -301,26 +408,31 @@ router.post(
   auth,
   authorize('LANDLORD', 'ADMIN'),
   [
+    body('code').optional().trim().isLength({ max: 50 }),
     body('title').notEmpty().trim(),
+    body('description').optional().trim(),
     body('address').notEmpty().trim(),
     body('city').notEmpty().trim(),
     body('state').notEmpty().trim(),
+    body('country').optional().trim().isLength({ max: 2 }),
     body('zipCode').notEmpty().trim(),
+    body('placeId').optional().trim(),
+    body('latitude').optional().isFloat({ min: -90, max: 90 }),
+    body('longitude').optional().isFloat({ min: -180, max: 180 }),
     body('price').isFloat({ min: 0 }),
-    body('type').isIn([
-      'APARTMENT',
-      'HOUSE',
-      'STUDIO',
-      'CONDO',
-      'VILLA',
-      'ROOM',
-    ]),
+    body('currencyCode').optional().trim().isLength({ min: 3, max: 3 }),
+    body('propertyTypeId').notEmpty().isUUID(),
     body('bedrooms').optional().isInt({ min: 0 }),
     body('bathrooms').optional().isInt({ min: 0 }),
-    body('area').optional().isFloat({ min: 0 }),
+    body('areaSqm').optional().isFloat({ min: 0 }),
+    body('furnished').optional().isBoolean(),
     body('isAvailable').optional().isBoolean(),
+    body('status')
+      .optional()
+      .isIn(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ARCHIVED']),
     body('images').optional().isArray(),
-    body('amenities').optional().isArray(),
+    body('amenityIds').optional().isArray(),
+    body('amenityIds.*').optional().isUUID(),
   ],
   propertiesController.createProperty
 );
@@ -349,40 +461,97 @@ router.post(
  *             properties:
  *               title:
  *                 type: string
+ *                 description: Property title
  *               description:
  *                 type: string
+ *                 description: Property description
  *               address:
  *                 type: string
+ *                 description: Property address
  *               city:
  *                 type: string
+ *                 description: City
  *               state:
  *                 type: string
+ *                 description: State/Province
+ *               country:
+ *                 type: string
+ *                 description: Country code
  *               zipCode:
  *                 type: string
+ *                 description: Postal code
+ *               placeId:
+ *                 type: string
+ *                 description: Google Places ID
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 description: Latitude coordinate
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 description: Longitude coordinate
  *               price:
  *                 type: number
- *               type:
+ *                 format: decimal
+ *                 description: Monthly rent price
+ *               currencyCode:
  *                 type: string
- *                 enum: [APARTMENT, HOUSE, STUDIO, CONDO, VILLA, ROOM]
+ *                 description: Currency code
+ *               propertyTypeId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Property type ID
  *               bedrooms:
  *                 type: integer
+ *                 description: Number of bedrooms
  *               bathrooms:
  *                 type: integer
- *               area:
+ *                 description: Number of bathrooms
+ *               areaSqm:
  *                 type: number
+ *                 format: float
+ *                 description: Area in square meters
+ *               furnished:
+ *                 type: boolean
+ *                 description: Whether property is furnished
  *               isAvailable:
  *                 type: boolean
+ *                 description: Whether property is available
+ *               status:
+ *                 type: string
+ *                 enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED]
+ *                 description: Listing status
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
- *               amenities:
+ *                 description: Array of image URLs
+ *               amenityIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                   format: uuid
+ *                 description: Array of amenity IDs
  *     responses:
  *       200:
  *         description: Property updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     property:
+ *                       $ref: '#/components/schemas/Property'
+ *       400:
+ *         description: Bad request
  *       401:
  *         description: Unauthorized
  *       403:
@@ -394,6 +563,32 @@ router.put(
   '/:id',
   auth,
   authorize('LANDLORD', 'ADMIN'),
+  [
+    body('title').optional().notEmpty().trim(),
+    body('description').optional().trim(),
+    body('address').optional().notEmpty().trim(),
+    body('city').optional().notEmpty().trim(),
+    body('state').optional().notEmpty().trim(),
+    body('country').optional().trim().isLength({ max: 2 }),
+    body('zipCode').optional().notEmpty().trim(),
+    body('placeId').optional().trim(),
+    body('latitude').optional().isFloat({ min: -90, max: 90 }),
+    body('longitude').optional().isFloat({ min: -180, max: 180 }),
+    body('price').optional().isFloat({ min: 0 }),
+    body('currencyCode').optional().trim().isLength({ min: 3, max: 3 }),
+    body('propertyTypeId').optional().isUUID(),
+    body('bedrooms').optional().isInt({ min: 0 }),
+    body('bathrooms').optional().isInt({ min: 0 }),
+    body('areaSqm').optional().isFloat({ min: 0 }),
+    body('furnished').optional().isBoolean(),
+    body('isAvailable').optional().isBoolean(),
+    body('status')
+      .optional()
+      .isIn(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ARCHIVED']),
+    body('images').optional().isArray(),
+    body('amenityIds').optional().isArray(),
+    body('amenityIds.*').optional().isUUID(),
+  ],
   propertiesController.updateProperty
 );
 

@@ -22,6 +22,24 @@ class PropertiesRepository {
             phone: true,
           },
         },
+        propertyType: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        amenities: {
+          include: {
+            amenity: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
+          },
+        },
       },
       orderBy,
     });
@@ -41,6 +59,58 @@ class PropertiesRepository {
             name: true,
             email: true,
             phone: true,
+          },
+        },
+        propertyType: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        amenities: {
+          include: {
+            amenity: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async findByCode(code) {
+    return await prisma.property.findUnique({
+      where: { code },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        propertyType: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        amenities: {
+          include: {
+            amenity: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
           },
         },
       },
@@ -84,6 +154,14 @@ class PropertiesRepository {
     return await prisma.property.delete({
       where: { id },
     });
+  }
+
+  async codeExists(code) {
+    const property = await prisma.property.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+    return !!property;
   }
 }
 
