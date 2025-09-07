@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const { prisma } = require('../../src/config/database');
 
 const penangProjects = [
   {
@@ -324,8 +322,6 @@ if (require.main === module) {
     } catch (error) {
       console.error('❌ Seeding failed:', error);
       process.exit(1);
-    } finally {
-      await prisma.$disconnect();
     }
   }
 

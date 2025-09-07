@@ -1,7 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../../src/config/database');
 const bcrypt = require('bcryptjs');
-
-const prisma = new PrismaClient();
 
 const users = [
   {
@@ -156,8 +154,6 @@ if (require.main === module) {
     } catch (error) {
       console.error('❌ Users seeding failed:', error);
       process.exit(1);
-    } finally {
-      await prisma.$disconnect();
     }
   }
 

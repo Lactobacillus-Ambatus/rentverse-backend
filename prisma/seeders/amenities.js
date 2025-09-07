@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const { prisma } = require('../../src/config/database');
 
 const amenities = [
   // Comfort & Climate
@@ -188,8 +186,6 @@ if (require.main === module) {
     } catch (error) {
       console.error('❌ Amenities seeding failed:', error);
       process.exit(1);
-    } finally {
-      await prisma.$disconnect();
     }
   }
 

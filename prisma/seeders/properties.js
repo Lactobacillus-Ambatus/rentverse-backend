@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const { prisma } = require('../../src/config/database');
 
 async function seedProperties() {
   console.log('🏠 Starting properties seeding...');
@@ -200,8 +198,6 @@ if (require.main === module) {
     } catch (error) {
       console.error('❌ Properties seeding failed:', error);
       process.exit(1);
-    } finally {
-      await prisma.$disconnect();
     }
   }
 

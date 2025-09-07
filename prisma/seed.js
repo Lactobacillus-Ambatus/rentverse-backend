@@ -1,11 +1,11 @@
-const { PrismaClient } = require('@prisma/client');
-const { seedPropertyTypes } = require('./seeders/propertyTypes');
-const { seedAmenities } = require('./seeders/amenities');
-const { seedUsers } = require('./seeders/users');
-const { seedPenangProjects } = require('./seeders/projects');
-const { seedProperties } = require('./seeders/properties');
-
-const prisma = new PrismaClient();
+const { prisma } = require('../src/config/database');
+const {
+  seedPropertyTypes,
+  seedAmenities, 
+  seedUsers,
+  seedPenangProjects,
+  seedProperties
+} = require('./seeders');
 
 async function main() {
   console.log('🌱 Starting comprehensive database seeding...\n');
