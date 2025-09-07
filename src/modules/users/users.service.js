@@ -89,6 +89,28 @@ class UsersService {
     return { message: 'User deleted successfully' };
   }
 
+  async createUser(userData) {
+    const bcryptjs = require('bcryptjs');
+
+    // Check if user already exists
+    const existingUser = await usersRepository.findByEmail(userData.email);
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcryptjs.hash(userData.password, saltRounds);
+
+    // Create user
+    const newUser = await usersRepository.create({
+      ...userData,
+      password: hashedPassword,
+    });
+
+    return newUser;
+  }
+
   async checkUserAccess(userId, requestingUser) {
     // Users can only view their own profile, admins can view any profile
     if (requestingUser.role !== 'ADMIN' && requestingUser.id !== userId) {

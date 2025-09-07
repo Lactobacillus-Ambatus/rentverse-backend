@@ -105,6 +105,43 @@ class UsersController {
     }
   }
 
+  async createUser(req, res) {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation errors',
+          errors: errors.array(),
+        });
+      }
+
+      const userData = req.body;
+      const newUser = await usersService.createUser(userData);
+
+      res.status(201).json({
+        success: true,
+        message: 'User created successfully',
+        data: { user: newUser },
+      });
+    } catch (error) {
+      console.error('Create user error:', error);
+
+      if (error.message === 'User with this email already exists') {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
   async deleteUser(req, res) {
     try {
       const userId = req.params.id;

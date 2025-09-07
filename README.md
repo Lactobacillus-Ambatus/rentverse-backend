@@ -1,33 +1,33 @@
 # Rentverse Backend
 
-Template Express.js backend dengan Prisma, PostgreSQL, Swagger UI, dan Husky pre-commit hooks.
+Express.js backend template with Prisma, PostgreSQL, Swagger UI, and Husky pre-commit hooks.
 
 ## Features
 
-- ✅ Express.js server dengan struktur folder yang terorganisir
-- ✅ Prisma ORM dengan PostgreSQL
-- ✅ Swagger UI documentation di `/docs`
-- ✅ Authentication & Authorization dengan JWT
+- ✅ Express.js server with organized folder structure
+- ✅ Prisma ORM with PostgreSQL
+- ✅ Swagger UI documentation at `/docs`
+- ✅ Authentication & Authorization with JWT
 - ✅ CORS, Helmet, Morgan middleware
 - ✅ Husky pre-commit hooks
-- ✅ Prettier & ESLint untuk code formatting
+- ✅ Prettier & ESLint for code formatting
 - ✅ Environment variables support
 - ✅ Error handling middleware
 - ✅ Database seeding
 - ✅ Health check endpoint
 
-## Struktur Proyek
+## Project Structure
 
 ```
 rentverse-backend/
-├── index.js                    # Entry point aplikasi
-├── package.json               # Dependencies dan scripts
-├── prisma/                    # Prisma schema dan migrations
+├── index.js                    # Application entry point
+├── package.json               # Dependencies and scripts
+├── prisma/                    # Prisma schema and migrations
 │   ├── schema.prisma          # Database schema
 │   └── seed.js               # Database seeding
-├── src/                      # Source code utama
+├── src/                      # Main source code
 │   ├── app.js                # Express app configuration
-│   ├── config/               # Konfigurasi aplikasi
+│   ├── config/               # Application configuration
 │   │   ├── database.js       # Database connection
 │   │   └── swagger.js        # Swagger configuration
 │   ├── middleware/           # Custom middleware
@@ -41,12 +41,12 @@ rentverse-backend/
 ├── .env.example            # Environment variables template
 ├── .prettierrc             # Prettier configuration
 ├── .eslintrc.json          # ESLint configuration
-└── README.md              # Dokumentasi proyek
+└── README.md              # Project documentation
 ```
 
 ## Installation
 
-1. **Clone repository dan install dependencies:**
+1. **Clone repository and install dependencies:**
 
 ```bash
 cd rentverse-backend
@@ -57,28 +57,28 @@ pnpm install
 
 ```bash
 cp .env.example .env
-# Edit .env dengan konfigurasi database dan JWT secret Anda
+# Edit .env with your database configuration and JWT secret
 ```
 
 3. **Setup PostgreSQL database:**
-   - Pastikan PostgreSQL sudah terinstall dan berjalan
-   - Buat database baru untuk project
-   - Update `DATABASE_URL` di file `.env`
+   - Make sure PostgreSQL is installed and running
+   - Create a new database for the project
+   - Update `DATABASE_URL` in `.env` file
 
-4. **Generate Prisma client dan run migrations:**
+4. **Generate Prisma client and run migrations:**
 
 ```bash
 pnpm db:generate
 pnpm db:migrate
 ```
 
-5. **Seed database dengan data contoh:**
+5. **Seed database with sample data:**
 
 ```bash
 pnpm db:seed
 ```
 
-6. **Jalankan server:**
+6. **Start the server:**
 
 ```bash
 # Development mode
@@ -90,7 +90,7 @@ pnpm start
 
 ## Environment Variables
 
-Buat file `.env` berdasarkan `.env.example`:
+Create `.env` file based on `.env.example`:
 
 ```env
 # Database
@@ -110,9 +110,9 @@ API_VERSION=v1
 
 ## API Endpoints
 
-Server akan berjalan di `http://localhost:3000`
+Server will run at `http://localhost:3000`
 
-### Dokumentasi API
+### API Documentation
 
 - **Swagger UI**: `http://localhost:3000/docs`
 
@@ -184,39 +184,39 @@ curl "http://localhost:3000/api/properties/geojson?bbox=106.7,-6.3,106.9,-6.1&li
 
 ## Database Schema
 
-Project ini menggunakan tiga model utama:
+This project uses three main models:
 
 ### User
 
-- Menyimpan informasi pengguna (tenant, landlord, admin)
-- Authentication dan role-based access control
+- Stores user information (tenant, landlord, admin)
+- Authentication and role-based access control
 
 ### Property
 
-- Menyimpan informasi properti yang disewakan
-- Relasi dengan User (owner)
+- Stores rental property information
+- Relationship with User (owner)
 
 ### Booking
 
-- Menyimpan informasi pemesanan
-- Relasi dengan User dan Property
+- Stores booking information
+- Relationship with User and Property
 
 ## Scripts
 
-- `pnpm start` - Jalankan server production
-- `pnpm dev` - Jalankan server development dengan nodemon
+- `pnpm start` - Run production server
+- `pnpm dev` - Run development server with nodemon
 - `pnpm db:generate` - Generate Prisma client
 - `pnpm db:migrate` - Run database migrations
 - `pnpm db:studio` - Open Prisma Studio
-- `pnpm db:seed` - Seed database dengan data contoh
-- `pnpm db:reset` - Reset database dan run migrations ulang
-- `pnpm format` - Format code dengan Prettier
+- `pnpm db:seed` - Seed database with sample data
+- `pnpm db:reset` - Reset database and re-run migrations
+- `pnpm format` - Format code with Prettier
 - `pnpm lint` - Run ESLint
 - `pnpm lint:fix` - Fix ESLint issues
 
 ## Authentication
 
-API menggunakan JWT untuk authentication. Setelah login, gunakan token di header:
+API uses JWT for authentication. After login, use the token in headers:
 
 ```
 Authorization: Bearer <your-jwt-token>
@@ -224,7 +224,7 @@ Authorization: Bearer <your-jwt-token>
 
 ### Demo Credentials
 
-Setelah menjalankan `pnpm db:seed`, Anda bisa login dengan:
+After running `pnpm db:seed`, you can login with:
 
 - **Admin**: `admin@rentverse.com` / `password123`
 - **Landlord**: `landlord@rentverse.com` / `password123`
@@ -236,33 +236,31 @@ Setelah menjalankan `pnpm db:seed`, Anda bisa login dengan:
 
 - **Prettier**: Code formatting
 - **ESLint**: Code linting
-- **Husky**: Git hooks untuk pre-commit checks
+- **Husky**: Git hooks for pre-commit checks
 
 ### Database
 
-- **Prisma**: Modern ORM dengan type safety
+- **Prisma**: Modern ORM with type safety
 - **PostgreSQL**: Robust relational database
 
 ### API Documentation
 
 - **Swagger UI**: Interactive API documentation
-- **JSDoc**: Code documentation dalam route files
+- **JSDoc**: Code documentation in route files
 
 ## Deployment
 
-Untuk deploy ke production:
+To deploy to production:
 
-1. Set environment variables yang sesuai
+1. Set appropriate environment variables
 2. Run database migrations: `pnpm db:deploy`
 3. Start application: `pnpm start`
 
 ## Contributing
 
-1. Pastikan code ter-format dengan Prettier: `pnpm format`
-2. Pastikan tidak ada ESLint errors: `pnpm lint`
-3. Test API endpoints menggunakan Swagger UI
-4. Commit akan otomatis menjalankan pre-commit hooks
+1. Ensure code is formatted with Prettier: `pnpm format`
+2. Ensure no ESLint errors: `pnpm lint`
+3. Test API endpoints using Swagger UI
+4. Commits will automatically run pre-commit hooks
 
-## License
-
-ISC
+##
