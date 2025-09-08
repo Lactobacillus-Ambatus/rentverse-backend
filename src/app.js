@@ -7,6 +7,7 @@ const swaggerUi = require('swagger-ui-express');
 
 const { connectDB } = require('./config/database');
 const swaggerSpecs = require('./config/swagger');
+const sessionMiddleware = require('./middleware/session');
 
 const app = express();
 
@@ -19,6 +20,12 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session middleware (required for OAuth)
+app.use(sessionMiddleware);
+
+// Static files
+app.use(express.static('public'));
 
 // Swagger UI setup
 app.use(

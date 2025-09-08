@@ -44,6 +44,12 @@ model User {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   verifiedAt       DateTime?
+  
+  // OAuth IDs
+  googleId         String?           @unique
+  facebookId       String?           @unique
+  appleId          String?           @unique
+  
   signatures       ESignature[]
   leasesAsLandlord Lease[]           @relation("LandlordLeases")
   leasesAsTenant   Lease[]           @relation("TenantLeases")
