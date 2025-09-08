@@ -4,11 +4,7 @@ const {
   STORAGE_URL,
   isS3Configured,
 } = require('../config/s3');
-const {
-  PutObjectCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-} = require('@aws-sdk/client-s3');
+const { PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
 
@@ -78,11 +74,10 @@ class FileUploadService {
         format = 'jpeg',
       } = options;
 
-      let transformer = sharp(buffer)
-        .resize(width, height, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        });
+      let transformer = sharp(buffer).resize(width, height, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
       switch (format) {
         case 'png':
           transformer = transformer.png({ quality });

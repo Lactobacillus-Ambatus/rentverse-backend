@@ -27,11 +27,15 @@ const router = express.Router();
  *           description: The phone number of the user
  *         role:
  *           type: string
- *           enum: [USER, LANDLORD, ADMIN]
+ *           enum: [TENANT, LANDLORD, ADMIN]
  *           description: The role of the user
  *         isActive:
  *           type: boolean
  *           description: Whether the user is active
+ *         verifiedAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the user was verified
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -45,7 +49,7 @@ const router = express.Router();
  *         email: john.doe@example.com
  *         name: John Doe
  *         phone: "+1234567890"
- *         role: USER
+ *         role: TENANT
  *         isActive: true
  *         createdAt: 2023-01-01T00:00:00.000Z
  *         updatedAt: 2023-01-01T00:00:00.000Z
@@ -57,6 +61,112 @@ const router = express.Router();
  *   name: Users
  *   description: User management API
  */
+
+/**
+ * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Create a new user (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: The email of the user
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 description: The name of the user
+ *               phone:
+ *                 type: string
+ *                 description: The phone number of the user
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: The password for the user
+ *               role:
+ *                 type: string
+ *                 enum: [TENANT, LANDLORD, ADMIN]
+ *                 default: TENANT
+ *                 description: The role of the user
+ *               isActive:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Whether the user is active
+ *             example:
+ *               email: john.doe@example.com
+ *               name: John Doe
+ *               phone: "+1234567890"
+ *               password: "securepassword123"
+ *               role: TENANT
+ *               isActive: true
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation errors
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       409:
+ *         description: User with this email already exists
+ */
+router.post(
+  '/',
+  auth,
+  authorize('ADMIN'),
+  [
+    body('email')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Please provide a valid email'),
+    body('name')
+      .trim()
+      .notEmpty()
+      .isLength({ min: 2 })
+      .withMessage('Name must be at least 2 characters long'),
+    body('password')
+      .isLength({ min: 6 })
+      .withMessage('Password must be at least 6 characters long'),
+    body('phone').optional().trim(),
+    body('role')
+      .optional()
+      .isIn(['TENANT', 'LANDLORD', 'ADMIN'])
+      .withMessage('Role must be one of: TENANT, LANDLORD, ADMIN'),
+    body('isActive')
+      .optional()
+      .isBoolean()
+      .withMessage('isActive must be a boolean'),
+  ],
+  usersController.createUser
+);
 
 /**
  * @swagger
@@ -83,7 +193,7 @@ const router = express.Router();
  *         name: role
  *         schema:
  *           type: string
- *           enum: [USER, LANDLORD, ADMIN]
+ *           enum: [TENANT, LANDLORD, ADMIN]
  *         description: Filter by user role
  *     responses:
  *       200:
@@ -220,7 +330,7 @@ router.put(
   [
     body('name').optional().trim().notEmpty(),
     body('phone').optional().trim(),
-    body('role').optional().isIn(['USER', 'LANDLORD', 'ADMIN']),
+    body('role').optional().isIn(['TENANT', 'LANDLORD', 'ADMIN']),
     body('isActive').optional().isBoolean(),
   ],
   usersController.updateUser

@@ -3,8 +3,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { prisma } = require('../config/database');
+const { passport, handleAppleSignIn } = require('../config/passport');
 
 const router = express.Router();
+
+// Initialize Passport
+router.use(passport.initialize());
 
 /**
  * @swagger
@@ -137,7 +141,7 @@ router.post(
           password: hashedPassword,
           name,
           phone: phone || null,
-          role: 'USER',
+          role: 'TENANT',
         },
         select: {
           id: true,
@@ -348,6 +352,7 @@ router.post(
       );
 
       // Remove password from response
+      // eslint-disable-next-line no-unused-vars
       const { password: _, ...userWithoutPassword } = user;
 
       res.json({
@@ -524,5 +529,531 @@ router.post(
     }
   }
 );
+
+// ============= OAuth Routes =============
+
+/**
+ * @swagger
+ * /api/auth/google:
+ *   get:
+ *     summary: Initiate Google OAuth login
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirect to Google OAuth consent screen
+ */
+router.get(
+  '/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+  })
+);
+
+/**
+ * @swagger
+ * /api/auth/google/callback:
+ *   get:
+ *     summary: Google OAuth callback
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: OAuth login successful
+ *       401:
+ *         description: OAuth login failed
+ */
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { session: false }),
+  async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect(
+          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: req.user.id, email: req.user.email, role: req.user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}&provider=google`
+      );
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_error`
+      );
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/auth/facebook:
+ *   get:
+ *     summary: Initiate Facebook OAuth login
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirect to Facebook OAuth consent screen
+ */
+router.get(
+  '/facebook',
+  passport.authenticate('facebook', {
+    scope: ['email'],
+  })
+);
+
+/**
+ * @swagger
+ * /api/auth/facebook/callback:
+ *   get:
+ *     summary: Facebook OAuth callback
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: OAuth login successful
+ *       401:
+ *         description: OAuth login failed
+ */
+router.get(
+  '/facebook/callback',
+  passport.authenticate('facebook', { session: false }),
+  async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect(
+          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: req.user.id, email: req.user.email, role: req.user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}&provider=facebook`
+      );
+    } catch (error) {
+      console.error('Facebook OAuth callback error:', error);
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_error`
+      );
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/auth/github:
+ *   get:
+ *     summary: Initiate GitHub OAuth login
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirect to GitHub OAuth consent screen
+ */
+router.get(
+  '/github',
+  passport.authenticate('github', {
+    scope: ['user:email'],
+  })
+);
+
+/**
+ * @swagger
+ * /api/auth/github/callback:
+ *   get:
+ *     summary: GitHub OAuth callback
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: OAuth login successful
+ *       401:
+ *         description: OAuth login failed
+ */
+router.get(
+  '/github/callback',
+  passport.authenticate('github', { session: false }),
+  async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect(
+          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: req.user.id, email: req.user.email, role: req.user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}&provider=github`
+      );
+    } catch (error) {
+      console.error('GitHub OAuth callback error:', error);
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_error`
+      );
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/auth/twitter:
+ *   get:
+ *     summary: Initiate Twitter OAuth login
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirect to Twitter OAuth consent screen
+ */
+router.get('/twitter', passport.authenticate('twitter'));
+
+/**
+ * @swagger
+ * /api/auth/twitter/callback:
+ *   get:
+ *     summary: Twitter OAuth callback
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: OAuth login successful
+ *       401:
+ *         description: OAuth login failed
+ */
+router.get(
+  '/twitter/callback',
+  passport.authenticate('twitter', { session: false }),
+  async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect(
+          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: req.user.id, email: req.user.email, role: req.user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}&provider=twitter`
+      );
+    } catch (error) {
+      console.error('Twitter OAuth callback error:', error);
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_error`
+      );
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/auth/apple:
+ *   post:
+ *     summary: Apple Sign In authentication
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - identityToken
+ *             properties:
+ *               identityToken:
+ *                 type: string
+ *                 description: Apple ID token from the client
+ *               user:
+ *                 type: object
+ *                 description: User information (only provided on first sign in)
+ *                 properties:
+ *                   email:
+ *                     type: string
+ *                   name:
+ *                     type: object
+ *                     properties:
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *     responses:
+ *       200:
+ *         description: Apple Sign In successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Invalid Apple token
+ */
+router.post('/apple', async (req, res) => {
+  try {
+    const { identityToken, user: userInfo } = req.body;
+
+    if (!identityToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Identity token is required',
+      });
+    }
+
+    // Handle Apple Sign In
+    const user = await handleAppleSignIn(identityToken, userInfo);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Apple Sign In successful',
+      data: {
+        user,
+        token,
+      },
+    });
+  } catch (error) {
+    console.error('Apple Sign In error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Apple Sign In failed',
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/oauth/link:
+ *   post:
+ *     summary: Link OAuth account to existing user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - provider
+ *               - providerId
+ *             properties:
+ *               provider:
+ *                 type: string
+ *                 enum: [google, facebook, apple, github, twitter]
+ *               providerId:
+ *                 type: string
+ *                 description: ID from the OAuth provider
+ *     responses:
+ *       200:
+ *         description: OAuth account linked successfully
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       409:
+ *         description: OAuth account already linked to another user
+ */
+router.post('/oauth/link', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided',
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { provider, providerId } = req.body;
+
+    if (!provider || !providerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provider and providerId are required',
+      });
+    }
+
+    if (
+      !['google', 'facebook', 'apple', 'github', 'twitter'].includes(provider)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid provider',
+      });
+    }
+
+    // Check if OAuth account is already linked to another user
+    const fieldName = `${provider}Id`;
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        [fieldName]: providerId,
+        id: { not: decoded.userId },
+      },
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: `This ${provider} account is already linked to another user`,
+      });
+    }
+
+    // Link OAuth account to current user
+    const updatedUser = await prisma.user.update({
+      where: { id: decoded.userId },
+      data: { [fieldName]: providerId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        googleId: true,
+        facebookId: true,
+        appleId: true,
+        githubId: true,
+        twitterId: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `${provider} account linked successfully`,
+      data: { user: updatedUser },
+    });
+  } catch (error) {
+    console.error('OAuth link error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/oauth/unlink:
+ *   post:
+ *     summary: Unlink OAuth account from user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - provider
+ *             properties:
+ *               provider:
+ *                 type: string
+ *                 enum: [google, facebook, apple, github, twitter]
+ *     responses:
+ *       200:
+ *         description: OAuth account unlinked successfully
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/oauth/unlink', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided',
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { provider } = req.body;
+
+    if (!provider) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provider is required',
+      });
+    }
+
+    if (
+      !['google', 'facebook', 'apple', 'github', 'twitter'].includes(provider)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid provider',
+      });
+    }
+
+    // Unlink OAuth account from current user
+    const fieldName = `${provider}Id`;
+    const updatedUser = await prisma.user.update({
+      where: { id: decoded.userId },
+      data: { [fieldName]: null },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        googleId: true,
+        facebookId: true,
+        appleId: true,
+        githubId: true,
+        twitterId: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `${provider} account unlinked successfully`,
+      data: { user: updatedUser },
+    });
+  } catch (error) {
+    console.error('OAuth unlink error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
 
 module.exports = router;

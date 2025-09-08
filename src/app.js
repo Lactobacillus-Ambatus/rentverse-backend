@@ -7,6 +7,7 @@ const swaggerUi = require('swagger-ui-express');
 
 const { connectDB } = require('./config/database');
 const swaggerSpecs = require('./config/swagger');
+const sessionMiddleware = require('./middleware/session');
 
 const app = express();
 
@@ -19,6 +20,12 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session middleware (required for OAuth)
+app.use(sessionMiddleware);
+
+// Static files
+app.use(express.static('public'));
 
 // Swagger UI setup
 app.use(
@@ -41,6 +48,8 @@ const uploadRoutes = require('./routes/upload');
 const userRoutes = require('./modules/users/users.routes');
 const propertyRoutes = require('./modules/properties/properties.routes');
 const bookingRoutes = require('./modules/bookings/bookings.routes');
+const propertyTypeRoutes = require('./modules/propertyTypes/propertyTypes.routes');
+const amenityRoutes = require('./modules/amenities/amenities.routes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -48,6 +57,8 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/property-types', propertyTypeRoutes);
+app.use('/api/amenities', amenityRoutes);
 
 /**
  * @swagger
@@ -156,7 +167,8 @@ app.use('*', (req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
   console.error('Global error handler:', err.stack);
 
   // Handle Prisma errors

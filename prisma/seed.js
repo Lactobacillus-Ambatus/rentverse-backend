@@ -1,107 +1,60 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
-
-const prisma = new PrismaClient();
+const { prisma } = require('../src/config/database');
+const {
+  seedPropertyTypes,
+  seedAmenities, 
+  seedUsers,
+  seedProperties
+} = require('./seeders');
 
 async function main() {
-  console.log('🌱 Starting seed...');
+  console.log('🌱 Starting comprehensive database seeding...\n');
 
-  // Hash password for demo users
-  const hashedPassword = await bcrypt.hash('password123', 12);
+  try {
+    const results = {};
 
-  // Create users
-  const adminUser = await prisma.user.create({
-    data: {
-      email: 'admin@rentverse.com',
-      name: 'Admin User',
-      phone: '+1234567890',
-      password: hashedPassword,
-      role: 'ADMIN',
-    },
-  });
+    // 1. Seed Property Types first (required by properties)
+    console.log('1️⃣ Seeding Property Types...');
+    results.propertyTypes = await seedPropertyTypes();
+    console.log('');
 
-  const landlord = await prisma.user.create({
-    data: {
-      email: 'landlord@rentverse.com',
-      name: 'John Landlord',
-      phone: '+1234567891',
-      password: hashedPassword,
-      role: 'LANDLORD',
-    },
-  });
+    // 2. Seed Amenities (can be independent)
+    console.log('2️⃣ Seeding Amenities...');
+    results.amenities = await seedAmenities();
+    console.log('');
 
-  const tenant = await prisma.user.create({
-    data: {
-      email: 'tenant@rentverse.com',
-      name: 'Jane Tenant',
-      phone: '+1234567892',
-      password: hashedPassword,
-      role: 'USER',
-    },
-  });
+    // 3. Seed Users (required by properties)
+    console.log('3️⃣ Seeding Users...');
+    results.users = await seedUsers();
+    console.log('');
 
-  // Create properties
-  const property1 = await prisma.property.create({
-    data: {
-      title: 'Beautiful Downtown Apartment',
-      description: 'A stunning 2-bedroom apartment in the heart of the city with modern amenities.',
-      address: '123 Main Street',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10001',
-      price: 2500.00,
-      type: 'APARTMENT',
-      bedrooms: 2,
-      bathrooms: 1,
-      area: 850.5,
-      amenities: ['WiFi', 'Air Conditioning', 'Parking', 'Gym'],
-      images: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
-      ownerId: landlord.id,
-    },
-  });
+    // 4. Seed Properties (requires users, property types, and amenities)
+    console.log('4️⃣ Seeding Sample Properties...');
+    results.properties = await seedProperties();
+    console.log('');
 
-  const property2 = await prisma.property.create({
-    data: {
-      title: 'Cozy Studio Near Park',
-      description: 'A cozy studio apartment perfect for students or young professionals.',
-      address: '456 Park Avenue',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10002',
-      price: 1200.00,
-      type: 'STUDIO',
-      bedrooms: 0,
-      bathrooms: 1,
-      area: 400.0,
-      amenities: ['WiFi', 'Heating', 'Near Public Transport'],
-      images: ['https://example.com/studio1.jpg'],
-      ownerId: landlord.id,
-    },
-  });
+    // Final summary
+    console.log('🎉 ===== SEEDING COMPLETED SUCCESSFULLY ===== 🎉\n');
+    
+    console.log('📊 Summary:');
+    console.log(`✅ Property Types: ${results.propertyTypes?.created || 0} processed`);
+    console.log(`✅ Amenities: ${results.amenities?.created || 0} processed`);
+    console.log(`✅ Users: ${results.users?.created || 0} created`);
+    console.log(`✅ Properties: ${results.properties?.created || 0} created`);
 
-  // Create a booking
-  const booking = await prisma.booking.create({
-    data: {
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-12-31'),
-      totalPrice: 30000.00, // 12 months * 2500
-      status: 'CONFIRMED',
-      notes: 'Long-term rental agreement',
-      userId: tenant.id,
-      propertyId: property1.id,
-    },
-  });
+    console.log('\n🔑 Demo Credentials (password: password123):');
+    console.log('   Admin: admin@rentverse.com');
+    console.log('   Landlord: landlord@rentverse.com');
+    console.log('   Tenant: tenant@rentverse.com');
 
-  console.log('✅ Seed completed successfully!');
-  console.log('📊 Created:');
-  console.log(`  - ${3} users (Admin, Landlord, Tenant)`);
-  console.log(`  - ${2} properties`);
-  console.log(`  - ${1} booking`);
-  console.log('');
-  console.log('🔑 Demo credentials:');
-  console.log('  Admin: admin@rentverse.com / password123');
-  console.log('  Landlord: landlord@rentverse.com / password123');
-  console.log('  Tenant: tenant@rentverse.com / password123');
+    console.log('\n🚀 Server endpoints:');
+    console.log('   API Documentation: http://localhost:3000/docs');
+    console.log('   Health Check: http://localhost:3000/health');
+    console.log('   API Base: http://localhost:3000/api');
+
+  } catch (error) {
+    console.error('❌ Seeding failed:', error);
+    throw error;
+  }
 }
 
 main()
