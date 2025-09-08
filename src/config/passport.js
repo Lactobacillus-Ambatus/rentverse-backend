@@ -1,8 +1,11 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
+const TwitterStrategy = require('passport-twitter').Strategy;
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const axios = require('axios');
 const { prisma } = require('./database');
 const { verifyAppleToken } = require('apple-signin-auth');
 
@@ -189,7 +192,205 @@ passport.use(
   )
 );
 
-// Apple Sign In handler (manual implementation since no official Passport strategy)
+// GitHub OAuth Strategy
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: `${process.env.BASE_URL}/api/auth/github/callback`,
+      scope: ['user:email'],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let email = profile.emails?.[0]?.value;
+        const name =
+          profile.displayName ||
+          profile.username ||
+          profile._json.name ||
+          'GitHub User';
+        const githubId = profile.id;
+        const username = profile.username;
+
+        // If no email in profile, try to fetch it from GitHub API
+        if (!email) {
+          try {
+            const emailResponse = await axios.get(
+              'https://api.github.com/user/emails',
+              {
+                headers: {
+                  Authorization: `token ${accessToken}`,
+                  'User-Agent': 'Rentverse-App',
+                },
+              }
+            );
+
+            // Find primary email or first verified email
+            const emails = emailResponse.data;
+            const primaryEmail = emails.find(e => e.primary && e.verified);
+            const verifiedEmail = emails.find(e => e.verified);
+
+            email =
+              primaryEmail?.email || verifiedEmail?.email || emails[0]?.email;
+          } catch (apiError) {
+            console.error('Error fetching GitHub emails:', apiError.message);
+          }
+        }
+
+        // If still no email, create a placeholder email using GitHub username
+        if (!email) {
+          email = `${username}@github.placeholder.com`;
+        }
+
+        // Check if user already exists by GitHub ID first
+        let user = await prisma.user.findFirst({
+          where: { githubId },
+        });
+
+        if (user) {
+          // User exists with GitHub ID, just return
+          return done(null, user);
+        }
+
+        // Check if user exists by email (but only if it's not a placeholder email)
+        if (!email.includes('@github.placeholder.com')) {
+          user = await prisma.user.findUnique({
+            where: { email },
+          });
+
+          if (user) {
+            // User exists with this email, link GitHub account
+            user = await prisma.user.update({
+              where: { id: user.id },
+              data: { githubId },
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                phone: true,
+                role: true,
+                isActive: true,
+                createdAt: true,
+              },
+            });
+            return done(null, user);
+          }
+        }
+
+        // Create new user
+        const randomPassword = await bcrypt.hash(
+          Math.random().toString(36).substring(2, 15),
+          12
+        );
+
+        user = await prisma.user.create({
+          data: {
+            email,
+            name,
+            password: randomPassword,
+            githubId,
+            role: 'TENANT',
+            isActive: true,
+            verifiedAt: new Date(),
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            phone: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+          },
+        });
+
+        return done(null, user);
+      } catch (error) {
+        console.error('GitHub OAuth error:', error);
+        return done(error, null);
+      }
+    }
+  )
+);
+
+// Twitter OAuth Strategy
+passport.use(
+  new TwitterStrategy(
+    {
+      consumerKey: process.env.TWITTER_CONSUMER_KEY,
+      consumerSecret: process.env.TWITTER_CONSUMER_SECRET,
+      callbackURL: `${process.env.BASE_URL}/api/auth/twitter/callback`,
+      includeEmail: true,
+    },
+    async (token, tokenSecret, profile, done) => {
+      try {
+        const email = profile.emails?.[0]?.value;
+        const name = profile.displayName || profile.username;
+        const twitterId = profile.id;
+
+        if (!email) {
+          return done(new Error('No email found from Twitter profile'), null);
+        }
+
+        // Check if user already exists
+        let user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (user) {
+          // User exists, update Twitter ID if not set
+          if (!user.twitterId) {
+            user = await prisma.user.update({
+              where: { id: user.id },
+              data: { twitterId },
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                phone: true,
+                role: true,
+                isActive: true,
+                createdAt: true,
+              },
+            });
+          }
+        } else {
+          // Create new user
+          const randomPassword = await bcrypt.hash(
+            Math.random().toString(36).substring(2, 15),
+            12
+          );
+
+          user = await prisma.user.create({
+            data: {
+              email,
+              name,
+              password: randomPassword,
+              twitterId,
+              role: 'TENANT',
+              isActive: true,
+              verifiedAt: new Date(),
+            },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              phone: true,
+              role: true,
+              isActive: true,
+              createdAt: true,
+            },
+          });
+        }
+
+        return done(null, user);
+      } catch (error) {
+        console.error('Twitter OAuth error:', error);
+        return done(error, null);
+      }
+    }
+  )
+); // Apple Sign In handler (manual implementation since no official Passport strategy)
 const handleAppleSignIn = async (appleToken, userInfo = null) => {
   try {
     // Verify Apple token

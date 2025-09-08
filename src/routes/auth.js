@@ -654,6 +654,121 @@ router.get(
 
 /**
  * @swagger
+ * /api/auth/github:
+ *   get:
+ *     summary: Initiate GitHub OAuth login
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirect to GitHub OAuth consent screen
+ */
+router.get(
+  '/github',
+  passport.authenticate('github', {
+    scope: ['user:email'],
+  })
+);
+
+/**
+ * @swagger
+ * /api/auth/github/callback:
+ *   get:
+ *     summary: GitHub OAuth callback
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: OAuth login successful
+ *       401:
+ *         description: OAuth login failed
+ */
+router.get(
+  '/github/callback',
+  passport.authenticate('github', { session: false }),
+  async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect(
+          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: req.user.id, email: req.user.email, role: req.user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}&provider=github`
+      );
+    } catch (error) {
+      console.error('GitHub OAuth callback error:', error);
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_error`
+      );
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/auth/twitter:
+ *   get:
+ *     summary: Initiate Twitter OAuth login
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirect to Twitter OAuth consent screen
+ */
+router.get('/twitter', passport.authenticate('twitter'));
+
+/**
+ * @swagger
+ * /api/auth/twitter/callback:
+ *   get:
+ *     summary: Twitter OAuth callback
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: OAuth login successful
+ *       401:
+ *         description: OAuth login failed
+ */
+router.get(
+  '/twitter/callback',
+  passport.authenticate('twitter', { session: false }),
+  async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect(
+          `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`
+        );
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: req.user.id, email: req.user.email, role: req.user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${token}&provider=twitter`
+      );
+    } catch (error) {
+      console.error('Twitter OAuth callback error:', error);
+      res.redirect(
+        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_error`
+      );
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/auth/apple:
  *   post:
  *     summary: Apple Sign In authentication
@@ -754,7 +869,7 @@ router.post('/apple', async (req, res) => {
  *             properties:
  *               provider:
  *                 type: string
- *                 enum: [google, facebook, apple]
+ *                 enum: [google, facebook, apple, github, twitter]
  *               providerId:
  *                 type: string
  *                 description: ID from the OAuth provider
@@ -789,7 +904,9 @@ router.post('/oauth/link', async (req, res) => {
       });
     }
 
-    if (!['google', 'facebook', 'apple'].includes(provider)) {
+    if (
+      !['google', 'facebook', 'apple', 'github', 'twitter'].includes(provider)
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Invalid provider',
@@ -826,6 +943,8 @@ router.post('/oauth/link', async (req, res) => {
         googleId: true,
         facebookId: true,
         appleId: true,
+        githubId: true,
+        twitterId: true,
         createdAt: true,
       },
     });
@@ -863,7 +982,7 @@ router.post('/oauth/link', async (req, res) => {
  *             properties:
  *               provider:
  *                 type: string
- *                 enum: [google, facebook, apple]
+ *                 enum: [google, facebook, apple, github, twitter]
  *     responses:
  *       200:
  *         description: OAuth account unlinked successfully
@@ -893,7 +1012,9 @@ router.post('/oauth/unlink', async (req, res) => {
       });
     }
 
-    if (!['google', 'facebook', 'apple'].includes(provider)) {
+    if (
+      !['google', 'facebook', 'apple', 'github', 'twitter'].includes(provider)
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Invalid provider',
@@ -915,6 +1036,8 @@ router.post('/oauth/unlink', async (req, res) => {
         googleId: true,
         facebookId: true,
         appleId: true,
+        githubId: true,
+        twitterId: true,
         createdAt: true,
       },
     });

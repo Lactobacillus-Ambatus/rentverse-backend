@@ -19,6 +19,9 @@ importers:
       apple-signin-auth:
         specifier: ^2.0.0
         version: 2.0.0
+      axios:
+        specifier: ^1.11.0
+        version: 1.11.0
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -58,9 +61,15 @@ importers:
       passport-facebook:
         specifier: ^3.0.0
         version: 3.0.0
+      passport-github2:
+        specifier: ^0.1.12
+        version: 0.1.12
       passport-google-oauth20:
         specifier: ^2.0.0
         version: 2.0.0
+      passport-twitter:
+        specifier: ^1.0.4
+        version: 1.0.4
       sharp:
         specifier: ^0.34.3
         version: 0.34.3
@@ -1282,6 +1291,18 @@ packages:
         integrity: sha512-ix/FxPn0MDjeyJ7i/yoHGFt/EX6LyNbxSEhPPXODPL+KB0VPk86UYfL0lMdy+KCnv+fmvIzySwaK5COwqVbWTQ==,
       }
 
+  asynckit@0.4.0:
+    resolution:
+      {
+        integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==,
+      }
+
+  axios@1.11.0:
+    resolution:
+      {
+        integrity: sha512-1Lx3WLFQWm3ooKDYZD1eXmoGO9fxYQjrycfHFC8P0sCfQVXyROp0p9PFWBehewBOdCwHc+f/b8I0fMto5eSfwA==,
+      }
+
   balanced-match@1.0.2:
     resolution:
       {
@@ -1473,6 +1494,13 @@ packages:
         integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==,
       }
 
+  combined-stream@1.0.8:
+    resolution:
+      {
+        integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==,
+      }
+    engines: { node: '>= 0.8' }
+
   commander@11.0.0:
     resolution:
       {
@@ -1609,6 +1637,13 @@ packages:
         integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==,
       }
 
+  delayed-stream@1.0.0:
+    resolution:
+      {
+        integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==,
+      }
+    engines: { node: '>=0.4.0' }
+
   depd@2.0.0:
     resolution:
       {
@@ -1707,6 +1742,13 @@ packages:
     resolution:
       {
         integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==,
+      }
+    engines: { node: '>= 0.4' }
+
+  es-set-tostringtag@2.1.0:
+    resolution:
+      {
+        integrity: sha512-j6vWzfrGVfyXxge+O0x5sh6cvxAog0a/4Rdd2K36zCMV5eJ+/+tOAngRO8cODMNWbVRdVlmGZQL2YS3yR8bIUA==,
       }
     engines: { node: '>= 0.4' }
 
@@ -1939,6 +1981,25 @@ packages:
         integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==,
       }
 
+  follow-redirects@1.15.11:
+    resolution:
+      {
+        integrity: sha512-deG2P0JfjrTxl50XGCDyfI97ZGVCxIpfKYmfyrQ54n5FO/0gfIES8C/Psl6kWVDolizcaaxZJnTS0QSMxvnsBQ==,
+      }
+    engines: { node: '>=4.0' }
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
+
+  form-data@4.0.4:
+    resolution:
+      {
+        integrity: sha512-KrGhL9Q4zjj0kiUt5OO4Mr/A/jlI2jDYs5eHBpYHPcBEVSiipAvn2Ko2HnPe20rmcuuvMHNdZFp+4IlGTMF0Ow==,
+      }
+    engines: { node: '>= 6' }
+
   formdata-polyfill@4.0.10:
     resolution:
       {
@@ -2116,6 +2177,13 @@ packages:
     resolution:
       {
         integrity: sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==,
+      }
+    engines: { node: '>= 0.4' }
+
+  has-tostringtag@1.0.2:
+    resolution:
+      {
+        integrity: sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==,
       }
     engines: { node: '>= 0.4' }
 
@@ -2668,6 +2736,12 @@ packages:
         integrity: sha512-JtFnB+8nxDEXgNyniwz573xxbKSOu3R8D40xQKqcjwJ2CDkYqUDI53o6IuzDJBx60Z8VKCm271+t8iFjakrl8Q==,
       }
 
+  oauth@0.9.15:
+    resolution:
+      {
+        integrity: sha512-a5ERWK1kh38ExDEfoO6qUHJb32rd7aYmPHuyCu3Fta/cnICvYmgd2uhuKXvPD+PXB+gCEYYEaQdIRAjCOwAKNA==,
+      }
+
   object-assign@4.1.1:
     resolution:
       {
@@ -2771,10 +2845,24 @@ packages:
       }
     engines: { node: '>= 0.4.0' }
 
+  passport-github2@0.1.12:
+    resolution:
+      {
+        integrity: sha512-3nPUCc7ttF/3HSP/k9sAXjz3SkGv5Nki84I05kSQPo01Jqq1NzJACgMblCK0fGcv9pKCG/KXU3AJRDGLqHLoIw==,
+      }
+    engines: { node: '>= 0.8.0' }
+
   passport-google-oauth20@2.0.0:
     resolution:
       {
         integrity: sha512-KSk6IJ15RoxuGq7D1UKK/8qKhNfzbLeLrG3gkLZ7p4A6DBCcv7xpyQwuXtWdpyR0+E0mwkpjY1VfPOhxQrKzdQ==,
+      }
+    engines: { node: '>= 0.4.0' }
+
+  passport-oauth1@1.3.0:
+    resolution:
+      {
+        integrity: sha512-8T/nX4gwKTw0PjxP1xfD0QhrydQNakzeOpZ6M5Uqdgz9/a/Ag62RmJxnZQ4LkbdXGrRehQHIAHNAu11rCP46Sw==,
       }
     engines: { node: '>= 0.4.0' }
 
@@ -2789,6 +2877,13 @@ packages:
     resolution:
       {
         integrity: sha512-CB97UUvDKJde2V0KDWWB3lyf6PC3FaZP7YxZ2G8OAtn9p4HI9j9JLP9qjOGZFvyl8uwNT8qM+hGnz/n16NI7oA==,
+      }
+    engines: { node: '>= 0.4.0' }
+
+  passport-twitter@1.0.4:
+    resolution:
+      {
+        integrity: sha512-qvdauqCqCJJci82mJ9hZZQ6nAv7aSHV31svL8+9H7mRlDdXCdfU6AARQrmmJu3DRmv9fvIebM7zzxR7mVufN3A==,
       }
     engines: { node: '>= 0.4.0' }
 
@@ -2890,6 +2985,12 @@ packages:
         integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==,
       }
     engines: { node: '>= 0.10' }
+
+  proxy-from-env@1.1.0:
+    resolution:
+      {
+        integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==,
+      }
 
   pstree.remy@1.1.8:
     resolution:
@@ -3460,12 +3561,27 @@ packages:
       utf-8-validate:
         optional: true
 
+  xmldom@0.1.31:
+    resolution:
+      {
+        integrity: sha512-yS2uJflVQs6n+CyjHoaBmVSqIDevTAWrzMmjG1Gc7h1qQ7uVozNhEPJAwZXWyGQ/Gafo3fCwrcaokezLPupVyQ==,
+      }
+    engines: { node: '>=0.1' }
+    deprecated: Deprecated due to CVE-2021-21366 resolved in 0.5.0
+
   xtend@4.0.2:
     resolution:
       {
         integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==,
       }
     engines: { node: '>=0.4' }
+
+  xtraverse@0.1.0:
+    resolution:
+      {
+        integrity: sha512-MANQdlG2hl1nQobxz1Rv8hsS1RuBS0C1N6qTOupv+9vmfrReePdxhmB2ecYjvsp4stJ80HD7erjkoF1Hd/FK9A==,
+      }
+    engines: { node: '>= 0.4.0' }
 
   yaml@2.0.0-1:
     resolution:
@@ -4602,6 +4718,16 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
+  asynckit@0.4.0: {}
+
+  axios@1.11.0:
+    dependencies:
+      follow-redirects: 1.15.11
+      form-data: 4.0.4
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+
   balanced-match@1.0.2: {}
 
   base64-js@1.5.1: {}
@@ -4716,6 +4842,10 @@ snapshots:
 
   colorette@2.0.20: {}
 
+  combined-stream@1.0.8:
+    dependencies:
+      delayed-stream: 1.0.0
+
   commander@11.0.0: {}
 
   commander@6.2.0: {}
@@ -4775,6 +4905,8 @@ snapshots:
 
   deep-is@0.1.4: {}
 
+  delayed-stream@1.0.0: {}
+
   depd@2.0.0: {}
 
   destroy@1.2.0: {}
@@ -4814,6 +4946,13 @@ snapshots:
   es-object-atoms@1.1.1:
     dependencies:
       es-errors: 1.3.0
+
+  es-set-tostringtag@2.1.0:
+    dependencies:
+      es-errors: 1.3.0
+      get-intrinsic: 1.3.0
+      has-tostringtag: 1.0.2
+      hasown: 2.0.2
 
   escape-html@1.0.3: {}
 
@@ -5026,6 +5165,16 @@ snapshots:
 
   flatted@3.3.3: {}
 
+  follow-redirects@1.15.11: {}
+
+  form-data@4.0.4:
+    dependencies:
+      asynckit: 0.4.0
+      combined-stream: 1.0.8
+      es-set-tostringtag: 2.1.0
+      hasown: 2.0.2
+      mime-types: 2.1.35
+
   formdata-polyfill@4.0.10:
     dependencies:
       fetch-blob: 3.2.0
@@ -5154,6 +5303,10 @@ snapshots:
   has-flag@4.0.0: {}
 
   has-symbols@1.1.0: {}
+
+  has-tostringtag@1.0.2:
+    dependencies:
+      has-symbols: 1.1.0
 
   hasown@2.0.2:
     dependencies:
@@ -5451,6 +5604,8 @@ snapshots:
 
   oauth@0.10.2: {}
 
+  oauth@0.9.15: {}
+
   object-assign@4.1.1: {}
 
   object-inspect@1.13.4: {}
@@ -5506,9 +5661,19 @@ snapshots:
     dependencies:
       passport-oauth2: 1.8.0
 
+  passport-github2@0.1.12:
+    dependencies:
+      passport-oauth2: 1.8.0
+
   passport-google-oauth20@2.0.0:
     dependencies:
       passport-oauth2: 1.8.0
+
+  passport-oauth1@1.3.0:
+    dependencies:
+      oauth: 0.9.15
+      passport-strategy: 1.0.0
+      utils-merge: 1.0.1
 
   passport-oauth2@1.8.0:
     dependencies:
@@ -5519,6 +5684,11 @@ snapshots:
       utils-merge: 1.0.1
 
   passport-strategy@1.0.0: {}
+
+  passport-twitter@1.0.4:
+    dependencies:
+      passport-oauth1: 1.3.0
+      xtraverse: 0.1.0
 
   passport@0.7.0:
     dependencies:
@@ -5560,6 +5730,8 @@ snapshots:
     dependencies:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
+
+  proxy-from-env@1.1.0: {}
 
   pstree.remy@1.1.8: {}
 
@@ -5880,7 +6052,13 @@ snapshots:
 
   ws@8.18.3: {}
 
+  xmldom@0.1.31: {}
+
   xtend@4.0.2: {}
+
+  xtraverse@0.1.0:
+    dependencies:
+      xmldom: 0.1.31
 
   yaml@2.0.0-1: {}
 

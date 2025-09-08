@@ -49,6 +49,8 @@ model User {
   googleId         String?           @unique
   facebookId       String?           @unique
   appleId          String?           @unique
+  githubId         String?           @unique
+  twitterId        String?           @unique
   
   signatures       ESignature[]
   leasesAsLandlord Lease[]           @relation("LandlordLeases")
