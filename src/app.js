@@ -43,7 +43,6 @@ const propertyRoutes = require('./modules/properties/properties.routes');
 const bookingRoutes = require('./modules/bookings/bookings.routes');
 const propertyTypeRoutes = require('./modules/propertyTypes/propertyTypes.routes');
 const amenityRoutes = require('./modules/amenities/amenities.routes');
-const projectRoutes = require('./modules/projects/projects.routes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -53,7 +52,6 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/property-types', propertyTypeRoutes);
 app.use('/api/amenities', amenityRoutes);
-app.use('/api/projects', projectRoutes);
 
 /**
  * @swagger

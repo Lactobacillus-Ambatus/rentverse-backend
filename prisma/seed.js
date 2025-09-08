@@ -3,7 +3,6 @@ const {
   seedPropertyTypes,
   seedAmenities, 
   seedUsers,
-  seedPenangProjects,
   seedProperties
 } = require('./seeders');
 
@@ -13,7 +12,7 @@ async function main() {
   try {
     const results = {};
 
-    // 1. Seed Property Types first (required by projects and properties)
+    // 1. Seed Property Types first (required by properties)
     console.log('1️⃣ Seeding Property Types...');
     results.propertyTypes = await seedPropertyTypes();
     console.log('');
@@ -28,13 +27,8 @@ async function main() {
     results.users = await seedUsers();
     console.log('');
 
-    // 4. Seed Projects (requires property types)
-    console.log('4️⃣ Seeding Malaysia Projects...');
-    results.projects = await seedPenangProjects();
-    console.log('');
-
-    // 5. Seed Properties (requires users, property types, and amenities)
-    console.log('5️⃣ Seeding Sample Properties...');
+    // 4. Seed Properties (requires users, property types, and amenities)
+    console.log('4️⃣ Seeding Sample Properties...');
     results.properties = await seedProperties();
     console.log('');
 
@@ -45,7 +39,6 @@ async function main() {
     console.log(`✅ Property Types: ${results.propertyTypes?.created || 0} processed`);
     console.log(`✅ Amenities: ${results.amenities?.created || 0} processed`);
     console.log(`✅ Users: ${results.users?.created || 0} created`);
-    console.log(`✅ Projects: ${results.projects?.created || 0} created`);
     console.log(`✅ Properties: ${results.properties?.created || 0} created`);
 
     console.log('\n🔑 Demo Credentials (password: password123):');

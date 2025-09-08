@@ -12,7 +12,6 @@ class PropertyTypesRepository {
         _count: {
           select: {
             properties: true,
-            projects: true,
           },
         },
       },
