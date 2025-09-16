@@ -369,6 +369,30 @@ class PropertiesService {
       return `${currencyCode} ${numPrice.toLocaleString()}`;
     }
   }
+
+  async getFeaturedProperties(page = 1, limit = 8) {
+    const skip = (page - 1) * limit;
+
+    const [properties, total] = await Promise.all([
+      propertiesRepository.findFeaturedProperties({ skip, take: limit }),
+      propertiesRepository.countFeaturedProperties(),
+    ]);
+
+    const pages = Math.ceil(total / limit);
+
+    // Add Google Maps URL to each property
+    const propertiesWithMapsUrl = this.addMapsUrlToProperties(properties);
+
+    return {
+      properties: propertiesWithMapsUrl,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages,
+      },
+    };
+  }
 }
 
 module.exports = new PropertiesService();

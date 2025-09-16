@@ -315,6 +315,59 @@ class PropertiesRepository {
     });
     return !!property;
   }
+
+  async findFeaturedProperties(options = {}) {
+    const { skip = 0, take = 8 } = options;
+
+    return await prisma.property.findMany({
+      where: {
+        status: 'APPROVED',
+        isAvailable: true,
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        propertyType: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        amenities: {
+          include: {
+            amenity: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      skip,
+      take,
+    });
+  }
+
+  async countFeaturedProperties() {
+    return await prisma.property.count({
+      where: {
+        status: 'APPROVED',
+        isAvailable: true,
+      },
+    });
+  }
 }
 
 module.exports = new PropertiesRepository();
