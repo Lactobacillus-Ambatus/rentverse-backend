@@ -23,18 +23,39 @@ const router = express.Router();
  *         data:
  *           type: object
  *           properties:
+ *             publicId:
+ *               type: string
+ *               description: Cloudinary public ID
  *             fileName:
  *               type: string
+ *               description: Generated filename (same as publicId)
  *             originalName:
  *               type: string
+ *               description: Original uploaded filename
  *             mimeType:
  *               type: string
+ *               description: File MIME type (may be converted)
  *             size:
  *               type: number
+ *               description: File size in bytes
  *             url:
  *               type: string
- *             bucket:
+ *               description: Cloudinary secure URL
+ *             width:
+ *               type: number
+ *               description: Image/Video width (if applicable)
+ *             height:
+ *               type: number
+ *               description: Image/Video height (if applicable)
+ *             format:
  *               type: string
+ *               description: Final format (webp for images, webm for videos)
+ *             resourceType:
+ *               type: string
+ *               description: Cloudinary resource type (image, video, raw)
+ *             etag:
+ *               type: string
+ *               description: File etag
  */
 
 /**
@@ -250,19 +271,30 @@ router.post(
 
 /**
  * @swagger
- * /api/upload/delete/{fileName}:
+ * /api/upload/delete/{publicId}:
  *   delete:
- *     summary: Delete a file
+ *     summary: Delete a file from Cloudinary
  *     tags: [Upload]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: fileName
+ *         name: publicId
  *         schema:
  *           type: string
  *         required: true
- *         description: Name of the file to delete
+ *         description: Public ID of the file to delete
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               resourceType:
+ *                 type: string
+ *                 enum: [image, video, raw]
+ *                 default: image
+ *                 description: Type of resource to delete
  *     responses:
  *       200:
  *         description: File deleted successfully
@@ -271,13 +303,13 @@ router.post(
  *       401:
  *         description: Unauthorized
  */
-router.delete('/delete/:fileName', auth, uploadController.deleteFile);
+router.delete('/delete/:publicId', auth, uploadController.deleteFile);
 
 /**
  * @swagger
  * /api/upload/delete-multiple:
  *   delete:
- *     summary: Delete multiple files
+ *     summary: Delete multiple files from Cloudinary
  *     tags: [Upload]
  *     security:
  *       - bearerAuth: []
@@ -288,10 +320,11 @@ router.delete('/delete/:fileName', auth, uploadController.deleteFile);
  *           schema:
  *             type: object
  *             properties:
- *               fileNames:
+ *               publicIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: Array of public IDs to delete
  *     responses:
  *       200:
  *         description: Files deleted successfully
@@ -301,6 +334,55 @@ router.delete('/delete/:fileName', auth, uploadController.deleteFile);
  *         description: Unauthorized
  */
 router.delete('/delete-multiple', auth, uploadController.deleteMultipleFiles);
+
+/**
+ * @swagger
+ * /api/upload/video-thumbnail/{publicId}:
+ *   get:
+ *     summary: Get video thumbnail URL
+ *     tags: [Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: publicId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Public ID of the video
+ *       - in: query
+ *         name: startOffset
+ *         schema:
+ *           type: string
+ *           default: "1s"
+ *         description: Time offset to extract thumbnail from
+ *     responses:
+ *       200:
+ *         description: Video thumbnail URL generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     thumbnailUrl:
+ *                       type: string
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/video-thumbnail/:publicId',
+  auth,
+  uploadController.getVideoThumbnail
+);
 
 // Error handling middleware
 router.use(handleUploadError);

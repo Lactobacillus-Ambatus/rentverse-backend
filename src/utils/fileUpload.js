@@ -1,33 +1,36 @@
 const {
-  s3Client,
-  STORAGE_BUCKET,
-  STORAGE_URL,
-  isS3Configured,
-} = require('../config/s3');
-const { PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+  cloudinaryClient,
+  cloudinary,
+  CLOUD_FOLDER_PREFIX,
+  isCloudinaryConfigured,
+} = require('../config/storage');
 const { v4: uuidv4 } = require('uuid');
-const sharp = require('sharp');
+const streamifier = require('streamifier');
 
 class FileUploadService {
   constructor() {
-    this.maxFileSize = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB default
+    this.maxFileSize = parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024; // 10MB default
     this.allowedImageTypes = (
       process.env.ALLOWED_IMAGE_TYPES ||
-      'image/jpeg,image/jpg,image/png,image/webp'
+      'image/jpeg,image/jpg,image/png,image/webp,image/gif,image/bmp,image/svg+xml'
+    ).split(',');
+    this.allowedVideoTypes = (
+      process.env.ALLOWED_VIDEO_TYPES ||
+      'video/mp4,video/avi,video/mov,video/wmv,video/flv,video/webm'
     ).split(',');
     this.allowedFileTypes = (
       process.env.ALLOWED_FILE_TYPES ||
-      'image/jpeg,image/jpg,image/png,image/webp,application/pdf'
+      'image/jpeg,image/jpg,image/png,image/webp,image/gif,image/bmp,image/svg+xml,video/mp4,video/avi,video/mov,video/wmv,video/flv,video/webm,application/pdf'
     ).split(',');
   }
 
   /**
-   * Check if S3 is configured
+   * Check if Cloudinary is configured
    */
-  checkS3Config() {
-    if (!isS3Configured) {
+  checkCloudinaryConfig() {
+    if (!isCloudinaryConfigured) {
       throw new Error(
-        'S3 storage is not configured. Please check your environment variables.'
+        'Cloudinary storage is not configured. Please check your environment variables.'
       );
     }
   }
@@ -56,93 +59,116 @@ class FileUploadService {
   /**
    * Generate unique filename
    */
-  generateFileName(originalName, folder = '') {
-    const extension = originalName.split('.').pop();
-    const uniqueName = `${uuidv4()}.${extension}`;
-    return folder ? `${folder}/${uniqueName}` : uniqueName;
+  generatePublicId(originalName, folder = 'general') {
+    const nameWithoutExt = originalName.split('.')[0];
+    const uniqueName = `${nameWithoutExt}_${uuidv4()}`;
+    return `${CLOUD_FOLDER_PREFIX}/${folder}/${uniqueName}`;
   }
 
   /**
-   * Optimize image before upload
+   * Get upload options based on file type
    */
-  async optimizeImage(buffer, options = {}) {
-    try {
-      const {
-        width = 1920,
-        height = 1080,
-        quality = 80,
-        format = 'jpeg',
-      } = options;
+  getUploadOptions(file, folder, publicId) {
+    const baseOptions = {
+      public_id: publicId,
+      folder: `${CLOUD_FOLDER_PREFIX}/${folder}`,
+      use_filename: false,
+      unique_filename: false,
+      overwrite: true,
+      quality: 'auto:good',
+    };
 
-      let transformer = sharp(buffer).resize(width, height, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      });
-      switch (format) {
-        case 'png':
-          transformer = transformer.png({ quality });
-          break;
-        case 'webp':
-          transformer = transformer.webp({ quality });
-          break;
-        case 'jpeg':
-        case 'jpg':
-          transformer = transformer.jpeg({ quality });
-          break;
-        default:
-          transformer = transformer.jpeg({ quality }); // fallback to jpeg
-          break;
-      }
-      const optimized = await transformer.toBuffer();
-
-      return optimized;
-    } catch (error) {
-      console.error('Image optimization error:', error);
-      return buffer; // Return original if optimization fails
+    // Image upload options with WebP conversion
+    if (this.allowedImageTypes.includes(file.mimetype)) {
+      return {
+        ...baseOptions,
+        resource_type: 'image',
+        format: 'webp', // Auto convert to WebP
+        transformation: [
+          {
+            quality: 'auto:good',
+            fetch_format: 'auto',
+            width: 1920,
+            height: 1080,
+            crop: 'limit',
+          },
+        ],
+      };
     }
+
+    // Video upload options with WebM conversion
+    if (this.allowedVideoTypes.includes(file.mimetype)) {
+      return {
+        ...baseOptions,
+        resource_type: 'video',
+        format: 'webm', // Auto convert to WebM
+        transformation: [
+          {
+            quality: 'auto:good',
+            width: 1920,
+            height: 1080,
+            crop: 'limit',
+            video_codec: 'vp9', // Use VP9 codec for WebM
+          },
+        ],
+      };
+    }
+
+    // Other files (PDF, etc.)
+    return {
+      ...baseOptions,
+      resource_type: 'raw',
+    };
   }
 
   /**
-   * Upload file to S3-compatible storage
+   * Upload file to Cloudinary
    */
   async uploadFile(file, folder = 'general', optimize = true) {
     try {
-      // Check if S3 is configured
-      this.checkS3Config();
+      // Check if Cloudinary is configured
+      this.checkCloudinaryConfig();
 
       // Validate file
       this.validateFile(file, this.allowedFileTypes);
 
-      // Generate unique filename
-      const fileName = this.generateFileName(file.originalname, folder);
+      // Generate unique public ID
+      const publicId = this.generatePublicId(file.originalname, folder);
 
-      let fileBuffer = file.buffer;
+      // Get upload options based on file type
+      const uploadOptions = this.getUploadOptions(file, folder, publicId);
 
-      // Optimize image if it's an image file and optimization is enabled
-      if (optimize && this.allowedImageTypes.includes(file.mimetype)) {
-        fileBuffer = await this.optimizeImage(fileBuffer);
-      }
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          uploadOptions,
+          (error, result) => {
+            if (error) {
+              console.error('Cloudinary upload error:', error);
+              reject(error);
+              return;
+            }
 
-      // Upload to S3 Storage
-      const command = new PutObjectCommand({
-        Bucket: STORAGE_BUCKET,
-        Key: fileName,
-        Body: fileBuffer,
-        ContentType: file.mimetype,
+            // Return file info
+            resolve({
+              publicId: result.public_id,
+              fileName: result.public_id,
+              originalName: file.originalname,
+              mimeType: result.format
+                ? `${result.resource_type}/${result.format}`
+                : file.mimetype,
+              size: result.bytes,
+              url: result.secure_url,
+              width: result.width,
+              height: result.height,
+              format: result.format,
+              resourceType: result.resource_type,
+              etag: result.etag,
+            });
+          }
+        );
+
+        streamifier.createReadStream(file.buffer).pipe(uploadStream);
       });
-
-      const result = await s3Client.send(command);
-
-      // Return file info
-      return {
-        fileName: fileName,
-        originalName: file.originalname,
-        mimeType: file.mimetype,
-        size: file.size,
-        url: `${STORAGE_URL}/${fileName}`,
-        bucket: STORAGE_BUCKET,
-        etag: result.ETag,
-      };
     } catch (error) {
       console.error('File upload error:', error);
       throw error;
@@ -166,20 +192,21 @@ class FileUploadService {
   }
 
   /**
-   * Delete file from S3 Storage
+   * Delete file from Cloudinary
    */
-  async deleteFile(fileName) {
+  async deleteFile(publicId, resourceType = 'image') {
     try {
-      this.checkS3Config();
+      this.checkCloudinaryConfig();
 
-      const command = new DeleteObjectCommand({
-        Bucket: STORAGE_BUCKET,
-        Key: fileName,
+      const result = await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType,
       });
 
-      await s3Client.send(command);
-
-      return { success: true, message: 'File deleted successfully' };
+      if (result.result === 'ok') {
+        return { success: true, message: 'File deleted successfully' };
+      } else {
+        throw new Error(`Delete failed: ${result.result}`);
+      }
     } catch (error) {
       console.error('File delete error:', error);
       throw error;
@@ -189,21 +216,13 @@ class FileUploadService {
   /**
    * Delete multiple files
    */
-  async deleteMultipleFiles(fileNames) {
+  async deleteMultipleFiles(publicIds) {
     try {
-      this.checkS3Config();
+      this.checkCloudinaryConfig();
 
-      const deletePromises = fileNames.map(fileName => {
-        const command = new DeleteObjectCommand({
-          Bucket: STORAGE_BUCKET,
-          Key: fileName,
-        });
-        return s3Client.send(command);
-      });
+      const result = await cloudinary.api.delete_resources(publicIds);
 
-      await Promise.all(deletePromises);
-
-      return { success: true, message: 'Files deleted successfully' };
+      return { success: true, message: 'Files deleted successfully', result };
     } catch (error) {
       console.error('Multiple file delete error:', error);
       throw error;
@@ -211,10 +230,17 @@ class FileUploadService {
   }
 
   /**
-   * Get file URL
+   * Get file URL with transformations
    */
-  getFileUrl(fileName) {
-    return `${STORAGE_URL}/${fileName}`;
+  getFileUrl(publicId, options = {}) {
+    if (!isCloudinaryConfigured) {
+      return null;
+    }
+
+    return cloudinary.url(publicId, {
+      secure: true,
+      ...options,
+    });
   }
 
   /**
@@ -222,44 +248,88 @@ class FileUploadService {
    */
   async createThumbnail(file, folder = 'thumbnails') {
     try {
-      this.checkS3Config();
+      this.checkCloudinaryConfig();
+
       if (!this.allowedImageTypes.includes(file.mimetype)) {
         throw new Error('File is not an image');
       }
 
-      // Create thumbnail
-      const thumbnailBuffer = await sharp(file.buffer)
-        .resize(300, 300, {
-          fit: 'cover',
-          position: 'center',
-        })
-        .jpeg({ quality: 70 })
-        .toBuffer();
+      // Generate unique public ID for thumbnail
+      const publicId = this.generatePublicId(file.originalname, folder);
 
-      // Generate filename for thumbnail
-      const thumbnailFileName = this.generateFileName(
-        file.originalname,
-        folder
-      );
-
-      // Upload thumbnail to S3
-      const command = new PutObjectCommand({
-        Bucket: STORAGE_BUCKET,
-        Key: thumbnailFileName,
-        Body: thumbnailBuffer,
-        ContentType: 'image/jpeg',
-      });
-
-      const result = await s3Client.send(command);
-
-      return {
-        fileName: thumbnailFileName,
-        url: `${STORAGE_URL}/${thumbnailFileName}`,
-        size: thumbnailBuffer.length,
-        etag: result.ETag,
+      const uploadOptions = {
+        public_id: publicId,
+        folder: `${CLOUD_FOLDER_PREFIX}/${folder}`,
+        resource_type: 'image',
+        format: 'webp',
+        transformation: [
+          {
+            width: 300,
+            height: 300,
+            crop: 'fill',
+            gravity: 'center',
+            quality: 'auto:good',
+          },
+        ],
       };
+
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          uploadOptions,
+          (error, result) => {
+            if (error) {
+              console.error('Thumbnail creation error:', error);
+              reject(error);
+              return;
+            }
+
+            resolve({
+              publicId: result.public_id,
+              fileName: result.public_id,
+              url: result.secure_url,
+              size: result.bytes,
+              width: result.width,
+              height: result.height,
+              format: result.format,
+              etag: result.etag,
+            });
+          }
+        );
+
+        streamifier.createReadStream(file.buffer).pipe(uploadStream);
+      });
     } catch (error) {
       console.error('Thumbnail creation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get video thumbnail
+   */
+  async getVideoThumbnail(publicId, options = {}) {
+    try {
+      this.checkCloudinaryConfig();
+
+      const thumbnailOptions = {
+        resource_type: 'video',
+        format: 'webp',
+        transformation: [
+          {
+            width: 300,
+            height: 300,
+            crop: 'fill',
+            gravity: 'center',
+            quality: 'auto:good',
+            start_offset: options.startOffset || '1s', // Get frame at 1 second
+          },
+        ],
+        ...options,
+      };
+
+      return this.getFileUrl(publicId, thumbnailOptions);
+    } catch (error) {
+      console.error('Video thumbnail error:', error);
       throw error;
     }
   }

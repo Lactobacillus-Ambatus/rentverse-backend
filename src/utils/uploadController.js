@@ -160,16 +160,17 @@ class UploadController {
    */
   async deleteFile(req, res) {
     try {
-      const { fileName } = req.params;
+      const { publicId } = req.params;
+      const { resourceType = 'image' } = req.body;
 
-      if (!fileName) {
+      if (!publicId) {
         return res.status(400).json({
           success: false,
-          message: 'File name is required',
+          message: 'Public ID is required',
         });
       }
 
-      const result = await fileUploadService.deleteFile(fileName);
+      const result = await fileUploadService.deleteFile(publicId, resourceType);
 
       res.status(200).json({
         success: true,
@@ -189,16 +190,16 @@ class UploadController {
    */
   async deleteMultipleFiles(req, res) {
     try {
-      const { fileNames } = req.body;
+      const { publicIds } = req.body;
 
-      if (!fileNames || !Array.isArray(fileNames) || fileNames.length === 0) {
+      if (!publicIds || !Array.isArray(publicIds) || publicIds.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'File names array is required',
+          message: 'Public IDs array is required',
         });
       }
 
-      const result = await fileUploadService.deleteMultipleFiles(fileNames);
+      const result = await fileUploadService.deleteMultipleFiles(publicIds);
 
       res.status(200).json({
         success: true,
@@ -209,6 +210,41 @@ class UploadController {
       res.status(500).json({
         success: false,
         message: error.message || 'Files deletion failed',
+      });
+    }
+  }
+
+  /**
+   * Get video thumbnail
+   */
+  async getVideoThumbnail(req, res) {
+    try {
+      const { publicId } = req.params;
+      const { startOffset = '1s' } = req.query;
+
+      if (!publicId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Public ID is required',
+        });
+      }
+
+      const thumbnailUrl = await fileUploadService.getVideoThumbnail(publicId, {
+        startOffset,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Video thumbnail generated successfully',
+        data: {
+          thumbnailUrl,
+        },
+      });
+    } catch (error) {
+      console.error('Get video thumbnail error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Video thumbnail generation failed',
       });
     }
   }
