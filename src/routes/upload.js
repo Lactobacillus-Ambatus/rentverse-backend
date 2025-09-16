@@ -69,7 +69,7 @@ const router = express.Router();
  * @swagger
  * /api/upload/single:
  *   post:
- *     summary: Upload a single file
+ *     summary: Upload a single file with auto WebP/WebM conversion
  *     tags: [Upload]
  *     security:
  *       - bearerAuth: []
@@ -83,11 +83,9 @@ const router = express.Router();
  *               file:
  *                 type: string
  *                 format: binary
- *               folder:
- *                 type: string
- *                 description: Folder to upload to (optional)
  *               optimize:
  *                 type: boolean
+ *                 description: Whether to optimize files (default true)
  *                 description: Whether to optimize images (default true)
  *     responses:
  *       200:
@@ -112,7 +110,7 @@ router.post(
  * @swagger
  * /api/upload/multiple:
  *   post:
- *     summary: Upload multiple files
+ *     summary: Upload multiple files with auto WebP/WebM conversion
  *     tags: [Upload]
  *     security:
  *       - bearerAuth: []
@@ -128,12 +126,9 @@ router.post(
  *                 items:
  *                   type: string
  *                   format: binary
- *               folder:
- *                 type: string
- *                 description: Folder to upload to (optional)
  *               optimize:
  *                 type: boolean
- *                 description: Whether to optimize images (default true)
+ *                 description: Whether to optimize files (default true)
  *     responses:
  *       200:
  *         description: Files uploaded successfully

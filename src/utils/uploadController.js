@@ -13,14 +13,9 @@ class UploadController {
         });
       }
 
-      const folder = req.body.folder || 'general';
       const optimize = req.body.optimize !== 'false'; // Default to true
 
-      const result = await fileUploadService.uploadFile(
-        req.file,
-        folder,
-        optimize
-      );
+      const result = await fileUploadService.uploadFile(req.file, optimize);
 
       res.status(200).json({
         success: true,
@@ -48,12 +43,10 @@ class UploadController {
         });
       }
 
-      const folder = req.body.folder || 'general';
       const optimize = req.body.optimize !== 'false'; // Default to true
 
       const results = await fileUploadService.uploadMultipleFiles(
         req.files,
-        folder,
         optimize
       );
 
@@ -85,13 +78,12 @@ class UploadController {
 
       const results = await fileUploadService.uploadMultipleFiles(
         req.files,
-        'properties',
         true
       );
 
       // Create thumbnails for each image
       const thumbnailPromises = req.files.map(file =>
-        fileUploadService.createThumbnail(file, 'properties/thumbnails')
+        fileUploadService.createThumbnail(file)
       );
 
       const thumbnails = await Promise.all(thumbnailPromises);
@@ -126,17 +118,10 @@ class UploadController {
       }
 
       // Upload original avatar
-      const avatar = await fileUploadService.uploadFile(
-        req.file,
-        'avatars',
-        true
-      );
+      const avatar = await fileUploadService.uploadFile(req.file, true);
 
       // Create thumbnail
-      const thumbnail = await fileUploadService.createThumbnail(
-        req.file,
-        'avatars/thumbnails'
-      );
+      const thumbnail = await fileUploadService.createThumbnail(req.file);
 
       res.status(200).json({
         success: true,

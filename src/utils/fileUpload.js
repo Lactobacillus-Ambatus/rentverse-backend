@@ -57,21 +57,29 @@ class FileUploadService {
   }
 
   /**
-   * Generate unique filename
+   * Generate unique public ID (simplified and compact)
    */
-  generatePublicId(originalName, folder = 'general') {
-    const nameWithoutExt = originalName.split('.')[0];
-    const uniqueName = `${nameWithoutExt}_${uuidv4()}`;
-    return `${CLOUD_FOLDER_PREFIX}/${folder}/${uniqueName}`;
+  generatePublicId(originalName) {
+    // Create timestamp in YYYYMMDDHHMMSS format
+    const now = new Date();
+    const timestamp = now
+      .toISOString()
+      .replace(/[-T:.Z]/g, '')
+      .slice(0, 14);
+
+    // Generate short UUID (first 8 characters)
+    const shortId = uuidv4().split('-')[0];
+
+    // Create compact public ID: rentverse_YYYYMMDDHHMMSS_shortId
+    return `${CLOUD_FOLDER_PREFIX}_${timestamp}_${shortId}`;
   }
 
   /**
    * Get upload options based on file type
    */
-  getUploadOptions(file, folder, publicId) {
+  getUploadOptions(file, publicId) {
     const baseOptions = {
       public_id: publicId,
-      folder: `${CLOUD_FOLDER_PREFIX}/${folder}`,
       use_filename: false,
       unique_filename: false,
       overwrite: true,
@@ -124,7 +132,7 @@ class FileUploadService {
   /**
    * Upload file to Cloudinary
    */
-  async uploadFile(file, folder = 'general', optimize = true) {
+  async uploadFile(file, optimize = true) {
     try {
       // Check if Cloudinary is configured
       this.checkCloudinaryConfig();
@@ -133,10 +141,10 @@ class FileUploadService {
       this.validateFile(file, this.allowedFileTypes);
 
       // Generate unique public ID
-      const publicId = this.generatePublicId(file.originalname, folder);
+      const publicId = this.generatePublicId(file.originalname);
 
       // Get upload options based on file type
-      const uploadOptions = this.getUploadOptions(file, folder, publicId);
+      const uploadOptions = this.getUploadOptions(file, publicId);
 
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -178,11 +186,9 @@ class FileUploadService {
   /**
    * Upload multiple files
    */
-  async uploadMultipleFiles(files, folder = 'general', optimize = true) {
+  async uploadMultipleFiles(files, optimize = true) {
     try {
-      const uploadPromises = files.map(file =>
-        this.uploadFile(file, folder, optimize)
-      );
+      const uploadPromises = files.map(file => this.uploadFile(file, optimize));
       const results = await Promise.all(uploadPromises);
       return results;
     } catch (error) {
@@ -246,7 +252,7 @@ class FileUploadService {
   /**
    * Create thumbnail for image
    */
-  async createThumbnail(file, folder = 'thumbnails') {
+  async createThumbnail(file) {
     try {
       this.checkCloudinaryConfig();
 
@@ -254,12 +260,17 @@ class FileUploadService {
         throw new Error('File is not an image');
       }
 
-      // Generate unique public ID for thumbnail
-      const publicId = this.generatePublicId(file.originalname, folder);
+      // Generate unique public ID for thumbnail with 'thumb' prefix
+      const now = new Date();
+      const timestamp = now
+        .toISOString()
+        .replace(/[-T:.Z]/g, '')
+        .slice(0, 14);
+      const shortId = uuidv4().split('-')[0];
+      const publicId = `${CLOUD_FOLDER_PREFIX}_thumb_${timestamp}_${shortId}`;
 
       const uploadOptions = {
         public_id: publicId,
-        folder: `${CLOUD_FOLDER_PREFIX}/${folder}`,
         resource_type: 'image',
         format: 'webp',
         transformation: [
@@ -272,7 +283,6 @@ class FileUploadService {
           },
         ],
       };
-
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           uploadOptions,
