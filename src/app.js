@@ -11,12 +11,118 @@ const sessionMiddleware = require('./middleware/session');
 
 const app = express();
 
+// Ngrok and proxy handling middleware
+app.use((req, res, next) => {
+  // Trust ngrok proxy
+  app.set('trust proxy', true);
+
+  // Handle ngrok headers
+  if (req.headers['x-forwarded-proto']) {
+    req.protocol = req.headers['x-forwarded-proto'];
+  }
+
+  if (req.headers['x-forwarded-host']) {
+    req.headers.host = req.headers['x-forwarded-host'];
+  }
+
+  next();
+});
+
 // Connect to database
 connectDB();
 
 // Middleware
-app.use(helmet());
-app.use(cors());
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
+// Simple CORS configuration - allow everything in development
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      console.log('CORS Origin:', origin);
+
+      // Always allow in development
+      if (process.env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+
+      // Allow no origin (mobile apps, postman, etc)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Explicitly allow ngrok URL
+      if (origin === 'https://curious-lively-monster.ngrok-free.app') {
+        return callback(null, true);
+      }
+
+      // Allow localhost variants
+      if (origin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/)) {
+        return callback(null, true);
+      }
+
+      return callback(null, true); // Allow all for now
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+      'X-Forwarded-Proto',
+      'X-Forwarded-Host',
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400,
+    preflightContinue: false,
+    optionsSuccessStatus: 200,
+  })
+);
+
+// Additional CORS debugging and handling
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  // Set CORS headers manually for ngrok and other origins
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header(
+    'Access-Control-Allow-Methods',
+    'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS'
+  );
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Forwarded-Proto, X-Forwarded-Host'
+  );
+  res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`CORS: ${req.method} ${req.path}`);
+    console.log(`Origin: ${origin}`);
+    console.log(`Host: ${req.headers.host}`);
+    console.log(`X-Forwarded-Host: ${req.headers['x-forwarded-host']}`);
+    console.log(`X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`);
+    console.log('---');
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  next();
+});
+
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -33,11 +139,35 @@ app.use(
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpecs, {
     explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .swagger-ui .info .title { color: #1976d2 }
+      .server-info { 
+        background: #e3f2fd; 
+        padding: 10px; 
+        border-radius: 5px; 
+        margin: 10px 0;
+        border-left: 4px solid #1976d2;
+      }
+    `,
     customSiteTitle: 'Rentverse API Documentation',
     customfavIcon: '/favicon.ico',
     swaggerOptions: {
       persistAuthorization: true,
+      servers: [
+        {
+          url:
+            process.env.NGROK_URL ||
+            `http://localhost:${process.env.PORT || 3005}`,
+          description: process.env.NGROK_URL
+            ? `🌐 Ngrok Tunnel: ${process.env.NGROK_URL}`
+            : `🏠 Local Server: http://localhost:${process.env.PORT || 3005}`,
+        },
+        {
+          url: `http://localhost:${process.env.PORT || 3005}`,
+          description: '🏠 Local Development Server',
+        },
+      ],
     },
   })
 );
@@ -98,6 +228,59 @@ app.get('/', (req, res) => {
     docs: 'Visit /docs for API documentation',
     database: 'Connected to PostgreSQL via Prisma',
     environment: process.env.NODE_ENV || 'development',
+    cors: 'CORS configured for development',
+    ngrok: process.env.NGROK_URL || 'No ngrok URL configured',
+    baseUrl: process.env.BASE_URL || 'http://localhost:3005',
+  });
+});
+
+/**
+ * @swagger
+ * /cors-test:
+ *   get:
+ *     summary: CORS test endpoint
+ *     description: Test endpoint for CORS functionality
+ *     tags: [General]
+ *     responses:
+ *       200:
+ *         description: CORS test successful
+ */
+app.get('/cors-test', (req, res) => {
+  res.json({
+    message: 'CORS test successful!',
+    origin: req.headers.origin,
+    host: req.headers.host,
+    forwardedHost: req.headers['x-forwarded-host'],
+    forwardedProto: req.headers['x-forwarded-proto'],
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * @swagger
+ * /cors-test:
+ *   post:
+ *     summary: CORS POST test endpoint
+ *     description: Test POST endpoint for CORS functionality
+ *     tags: [General]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: CORS POST test successful
+ */
+app.post('/cors-test', (req, res) => {
+  res.json({
+    message: 'CORS POST test successful!',
+    body: req.body,
+    origin: req.headers.origin,
+    host: req.headers.host,
+    forwardedHost: req.headers['x-forwarded-host'],
+    forwardedProto: req.headers['x-forwarded-proto'],
+    timestamp: new Date().toISOString(),
   });
 });
 

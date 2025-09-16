@@ -20,7 +20,7 @@ const upload = multer({
   fileFilter,
   limits: {
     fileSize: fileUploadService.maxFileSize,
-    files: 10, // Maximum 10 files per request
+    files: 20, // Maximum 20 files per request (increased for video support)
   },
 });
 
@@ -51,7 +51,7 @@ const handleUploadError = (error, req, res, next) => {
       case 'LIMIT_FILE_COUNT':
         return res.status(400).json({
           success: false,
-          message: 'Too many files. Maximum 10 files allowed',
+          message: 'Too many files. Maximum 20 files allowed',
         });
       case 'LIMIT_UNEXPECTED_FILE':
         return res.status(400).json({

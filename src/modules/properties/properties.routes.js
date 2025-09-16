@@ -214,6 +214,58 @@ router.get('/', propertiesController.getAllProperties);
 
 /**
  * @swagger
+ * /api/properties/featured:
+ *   get:
+ *     summary: Get featured properties (most recently updated properties with pagination)
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 8
+ *         description: Number of properties per page (default 8 for featured)
+ *     responses:
+ *       200:
+ *         description: List of featured properties with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     properties:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Property'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/featured', propertiesController.getFeaturedProperties);
+
+/**
+ * @swagger
  * /api/properties/property/{code}:
  *   get:
  *     summary: Get property by code/slug (public access)

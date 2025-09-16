@@ -274,6 +274,26 @@ class PropertiesController {
       });
     }
   }
+
+  async getFeaturedProperties(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 8;
+
+      const result = await propertiesService.getFeaturedProperties(page, limit);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get featured properties error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
 }
 
 module.exports = new PropertiesController();
