@@ -19,12 +19,25 @@ const router = express.Router();
  *           type: string
  *           format: email
  *           description: The email of the user
+ *         firstName:
+ *           type: string
+ *           description: The first name of the user
+ *         lastName:
+ *           type: string
+ *           description: The last name of the user
  *         name:
  *           type: string
- *           description: The name of the user
+ *           description: The computed full name of the user (firstName + lastName)
+ *         dateOfBirth:
+ *           type: string
+ *           format: date
+ *           description: The date of birth of the user
  *         phone:
  *           type: string
  *           description: The phone number of the user
+ *         profilePicture:
+ *           type: string
+ *           description: URL of the user's profile picture
  *         role:
  *           type: string
  *           enum: [USER, ADMIN]
@@ -47,7 +60,11 @@ const router = express.Router();
  *       example:
  *         id: "123e4567-e89b-12d3-a456-426614174000"
  *         email: john.doe@example.com
+ *         firstName: John
+ *         lastName: Doe
  *         name: John Doe
+ *         dateOfBirth: 1990-01-15
+ *         phone: "+1234567890"
  *         phone: "+1234567890"
  *         role: USER
  *         isActive: true
@@ -78,17 +95,26 @@ const router = express.Router();
  *             type: object
  *             required:
  *               - email
- *               - name
+ *               - firstName
+ *               - lastName
  *               - password
  *             properties:
  *               email:
  *                 type: string
  *                 format: email
  *                 description: The email of the user
- *               name:
+ *               firstName:
  *                 type: string
- *                 minLength: 2
- *                 description: The name of the user
+ *                 minLength: 1
+ *                 description: The first name of the user
+ *               lastName:
+ *                 type: string
+ *                 minLength: 1
+ *                 description: The last name of the user
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 description: The date of birth of the user
  *               phone:
  *                 type: string
  *                 description: The phone number of the user
@@ -107,7 +133,9 @@ const router = express.Router();
  *                 description: Whether the user is active
  *             example:
  *               email: john.doe@example.com
- *               name: John Doe
+ *               firstName: John
+ *               lastName: Doe
+ *               dateOfBirth: 1990-01-15
  *               phone: "+1234567890"
  *               password: "securepassword123"
  *               role: USER
@@ -147,11 +175,20 @@ router.post(
       .isEmail()
       .normalizeEmail()
       .withMessage('Please provide a valid email'),
-    body('name')
+    body('firstName')
       .trim()
       .notEmpty()
-      .isLength({ min: 2 })
-      .withMessage('Name must be at least 2 characters long'),
+      .isLength({ min: 1 })
+      .withMessage('First name is required'),
+    body('lastName')
+      .trim()
+      .notEmpty()
+      .isLength({ min: 1 })
+      .withMessage('Last name is required'),
+    body('dateOfBirth')
+      .optional()
+      .isISO8601()
+      .withMessage('Date of birth must be a valid date'),
     body('password')
       .isLength({ min: 6 })
       .withMessage('Password must be at least 6 characters long'),
@@ -272,8 +309,8 @@ router.get('/:id', auth, usersController.getUserById);
 /**
  * @swagger
  * /api/users/{id}:
- *   put:
- *     summary: Update user by ID
+ *   patch:
+ *     summary: Update user by ID (partial update)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -291,15 +328,26 @@ router.get('/:id', auth, usersController.getUserById);
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               firstName:
  *                 type: string
+ *                 description: First name of the user
+ *               lastName:
+ *                 type: string
+ *                 description: Last name of the user
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 description: Date of birth
  *               phone:
  *                 type: string
+ *                 description: Phone number
  *               role:
  *                 type: string
  *                 enum: [USER, ADMIN]
+ *                 description: User role (admin only)
  *               isActive:
  *                 type: boolean
+ *                 description: Active status (admin only)
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -324,11 +372,13 @@ router.get('/:id', auth, usersController.getUserById);
  *       404:
  *         description: User not found
  */
-router.put(
+router.patch(
   '/:id',
   auth,
   [
-    body('name').optional().trim().notEmpty(),
+    body('firstName').optional().trim().notEmpty(),
+    body('lastName').optional().trim().notEmpty(),
+    body('dateOfBirth').optional().isISO8601(),
     body('phone').optional().trim(),
     body('role').optional().isIn(['USER', 'ADMIN']),
     body('isActive').optional().isBoolean(),
@@ -362,5 +412,108 @@ router.put(
  *         description: User not found
  */
 router.delete('/:id', auth, authorize('ADMIN'), usersController.deleteUser);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   get:
+ *     summary: Get current user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/profile', auth, usersController.getProfile);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   patch:
+ *     summary: Update current user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 description: First name of the user
+ *               lastName:
+ *                 type: string
+ *                 description: Last name of the user
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 description: Date of birth
+ *               phone:
+ *                 type: string
+ *                 description: Phone number
+ *               profilePicture:
+ *                 type: string
+ *                 description: URL of profile picture
+ *             example:
+ *               firstName: John
+ *               lastName: Doe
+ *               dateOfBirth: 1990-01-15
+ *               phone: "+1234567890"
+ *               profilePicture: "https://example.com/profile.jpg"
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation errors
+ *       401:
+ *         description: Unauthorized
+ */
+router.patch(
+  '/profile',
+  auth,
+  [
+    body('firstName').optional().trim().notEmpty(),
+    body('lastName').optional().trim().notEmpty(),
+    body('dateOfBirth').optional().isISO8601(),
+    body('phone').optional().trim(),
+    body('profilePicture')
+      .optional()
+      .isURL()
+      .withMessage('Profile picture must be a valid URL'),
+  ],
+  usersController.updateProfile
+);
 
 module.exports = router;

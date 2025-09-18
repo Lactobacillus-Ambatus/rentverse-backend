@@ -42,6 +42,7 @@ model User {
   name             String            // Computed field (firstName + lastName) for backward compatibility
   dateOfBirth      DateTime?
   phone            String?
+  profilePicture   String?           // URL for user's profile picture
   password         String
   role             Role              @default(USER)
   isActive         Boolean           @default(true)
@@ -64,6 +65,7 @@ model User {
   properties       Property[]        @relation("OwnerProperties")
   propertyViews    PropertyView[]    @relation("PropertyViews")
   propertyRatings  PropertyRating[]  @relation("PropertyRatings")
+  propertyFavorites PropertyFavorite[] @relation("PropertyFavorites")
 
   @@map("users")
 }
@@ -116,6 +118,7 @@ model Property {
   predictions    PricePrediction[]
   views          PropertyView[]
   ratings        PropertyRating[]
+  favorites      PropertyFavorite[]
   owner          User                     @relation("OwnerProperties", fields: [ownerId], references: [id], onDelete: Cascade)
   propertyType   PropertyType             @relation(fields: [propertyTypeId], references: [id])
   amenities      PropertyAmenity[]
@@ -323,6 +326,22 @@ model PropertyRating {
   @@index([propertyId])
   @@index([userId])
   @@map("property_ratings")
+}
+
+/// Favorit property oleh user yang sudah login.
+model PropertyFavorite {
+  id          String    @id @default(uuid())
+  propertyId  String
+  userId      String
+  favoritedAt DateTime  @default(now())
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user        User      @relation("PropertyFavorites", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, userId]) // One favorite per user per property
+  @@index([propertyId])
+  @@index([userId])
+  @@index([userId, favoritedAt]) // For user's favorites list ordered by date
+  @@map("property_favorites")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

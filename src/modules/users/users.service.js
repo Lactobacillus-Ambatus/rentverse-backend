@@ -61,9 +61,16 @@ class UsersService {
 
     // Prepare update data
     const cleanUpdateData = {};
-    if (updateData.name) cleanUpdateData.name = updateData.name;
+    if (updateData.firstName !== undefined)
+      cleanUpdateData.firstName = updateData.firstName;
+    if (updateData.lastName !== undefined)
+      cleanUpdateData.lastName = updateData.lastName;
+    if (updateData.dateOfBirth !== undefined)
+      cleanUpdateData.dateOfBirth = updateData.dateOfBirth;
     if (updateData.phone !== undefined)
       cleanUpdateData.phone = updateData.phone;
+    if (updateData.profilePicture !== undefined)
+      cleanUpdateData.profilePicture = updateData.profilePicture;
     if (updateData.role && requestingUser.role === 'ADMIN')
       cleanUpdateData.role = updateData.role;
     if (updateData.isActive !== undefined && requestingUser.role === 'ADMIN') {
@@ -102,10 +109,16 @@ class UsersService {
     const saltRounds = 12;
     const hashedPassword = await bcryptjs.hash(userData.password, saltRounds);
 
-    // Create user
+    // Create user with new schema fields
     const newUser = await usersRepository.create({
-      ...userData,
+      email: userData.email,
+      firstName: userData.firstName || '',
+      lastName: userData.lastName || '',
+      dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth) : null,
+      phone: userData.phone,
       password: hashedPassword,
+      role: userData.role || 'USER',
+      isActive: userData.isActive !== undefined ? userData.isActive : true,
     });
 
     return newUser;

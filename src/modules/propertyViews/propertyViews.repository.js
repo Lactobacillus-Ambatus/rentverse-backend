@@ -449,6 +449,278 @@ class PropertyViewsRepository {
 
     return result;
   }
+
+  // ==================== FAVORITE METHODS ====================
+
+  /**
+   * Add property to user's favorites
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Created favorite record
+   */
+  async addToFavorites(propertyId, userId) {
+    return await prisma.propertyFavorite.create({
+      data: {
+        propertyId,
+        userId,
+      },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            code: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Remove property from user's favorites
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Deleted favorite record
+   */
+  async removeFromFavorites(propertyId, userId) {
+    return await prisma.propertyFavorite.delete({
+      where: {
+        propertyId_userId: {
+          propertyId,
+          userId,
+        },
+      },
+    });
+  }
+
+  /**
+   * Check if property is in user's favorites
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @returns {Promise<boolean>} True if property is favorited
+   */
+  async isFavorited(propertyId, userId) {
+    const favorite = await prisma.propertyFavorite.findUnique({
+      where: {
+        propertyId_userId: {
+          propertyId,
+          userId,
+        },
+      },
+    });
+    return !!favorite;
+  }
+
+  /**
+   * Check favorite status for multiple properties
+   * @param {string[]} propertyIds - Array of property IDs
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Object with property ID as key and boolean as value
+   */
+  async getFavoriteStatus(propertyIds, userId) {
+    const favorites = await prisma.propertyFavorite.findMany({
+      where: {
+        propertyId: { in: propertyIds },
+        userId,
+      },
+      select: {
+        propertyId: true,
+      },
+    });
+
+    const result = {};
+    propertyIds.forEach(id => {
+      result[id] = false; // Default to false
+    });
+
+    favorites.forEach(fav => {
+      result[fav.propertyId] = true;
+    });
+
+    return result;
+  }
+
+  /**
+   * Get user's favorite properties with pagination
+   * @param {Object} options - Query options
+   * @param {string} options.userId - User ID
+   * @param {number} [options.page=1] - Page number
+   * @param {number} [options.limit=10] - Items per page
+   * @returns {Promise<Object>} Favorite properties with pagination
+   */
+  async getUserFavorites({ userId, page = 1, limit = 10 }) {
+    const skip = (page - 1) * limit;
+
+    const [favorites, total] = await Promise.all([
+      prisma.propertyFavorite.findMany({
+        where: { userId },
+        include: {
+          property: {
+            include: {
+              propertyType: true,
+              owner: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                  name: true,
+                },
+              },
+              amenities: {
+                include: {
+                  amenity: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          favoritedAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.propertyFavorite.count({ where: { userId } }),
+    ]);
+
+    return {
+      favorites: favorites.map(fav => ({
+        favoritedAt: fav.favoritedAt,
+        property: fav.property,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Get favorite count for a property
+   * @param {string} propertyId - Property ID
+   * @returns {Promise<number>} Favorite count
+   */
+  async getFavoriteCount(propertyId) {
+    return await prisma.propertyFavorite.count({
+      where: { propertyId },
+    });
+  }
+
+  /**
+   * Get favorite counts for multiple properties
+   * @param {string[]} propertyIds - Array of property IDs
+   * @returns {Promise<Object>} Object with property ID as key and count as value
+   */
+  async getFavoriteCounts(propertyIds) {
+    const favoriteCounts = await prisma.propertyFavorite.groupBy({
+      by: ['propertyId'],
+      where: {
+        propertyId: {
+          in: propertyIds,
+        },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    // Convert to object format for easier access
+    const result = {};
+    propertyIds.forEach(id => {
+      result[id] = 0; // Default to 0 if no favorites
+    });
+
+    favoriteCounts.forEach(item => {
+      result[item.propertyId] = item._count.id;
+    });
+
+    return result;
+  }
+
+  /**
+   * Get users who favorited a property
+   * @param {string} propertyId - Property ID
+   * @param {Object} [options={}] - Query options
+   * @param {number} [options.page=1] - Page number
+   * @param {number} [options.limit=20] - Items per page
+   * @returns {Promise<Object>} Users who favorited with pagination
+   */
+  async getPropertyFavoriters(propertyId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+    const skip = (page - 1) * limit;
+
+    const [favorites, total] = await Promise.all([
+      prisma.propertyFavorite.findMany({
+        where: { propertyId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          favoritedAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.propertyFavorite.count({ where: { propertyId } }),
+    ]);
+
+    return {
+      favoriters: favorites.map(fav => ({
+        favoritedAt: fav.favoritedAt,
+        user: fav.user,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Get recent users who favorited a property (for stats)
+   * @param {string} propertyId - Property ID
+   * @param {number} [limit=10] - Number of recent favorites to return
+   * @returns {Promise<Array>} Recent favorites with limited user info
+   */
+  async getRecentFavorites(propertyId, limit = 10) {
+    const recentFavorites = await prisma.propertyFavorite.findMany({
+      where: { propertyId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        favoritedAt: 'desc',
+      },
+      take: limit,
+    });
+
+    return recentFavorites.map(fav => ({
+      userId: fav.userId,
+      username:
+        fav.user.name || `${fav.user.firstName} ${fav.user.lastName}`.trim(),
+      createdAt: fav.favoritedAt,
+    }));
+  }
 }
 
 module.exports = PropertyViewsRepository;

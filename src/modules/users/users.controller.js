@@ -175,6 +175,90 @@ class UsersController {
       });
     }
   }
+
+  async getProfile(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await usersService.getUserById(userId);
+
+      res.json({
+        success: true,
+        data: { user },
+      });
+    } catch (error) {
+      console.error('Get profile error:', error);
+
+      if (error.message === 'User not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  async updateProfile(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+      }
+
+      const userId = req.user.id;
+      const updateData = req.body;
+
+      // Filter out role and isActive since users can't change these for themselves
+      const allowedFields = [
+        'firstName',
+        'lastName',
+        'dateOfBirth',
+        'phone',
+        'profilePicture',
+      ];
+      const profileUpdateData = {};
+
+      allowedFields.forEach(field => {
+        if (updateData[field] !== undefined) {
+          profileUpdateData[field] = updateData[field];
+        }
+      });
+
+      const user = await usersService.updateUser(
+        userId,
+        profileUpdateData,
+        req.user
+      );
+
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: { user },
+      });
+    } catch (error) {
+      console.error('Update profile error:', error);
+
+      if (error.message === 'User not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
 }
 
 module.exports = new UsersController();

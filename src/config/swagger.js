@@ -19,6 +19,10 @@ const swaggerOptions = {
     },
     servers: [
       {
+        url: `http://localhost:${process.env.PORT || 3005}`,
+        description: 'Local development server',
+      },
+      {
         url:
           process.env.NGROK_URL ||
           `http://localhost:${process.env.PORT || 3005}`,
@@ -26,10 +30,7 @@ const swaggerOptions = {
           ? 'Ngrok tunnel server'
           : 'Development server',
       },
-      {
-        url: `http://localhost:${process.env.PORT || 3005}`,
-        description: 'Local development server',
-      },
+
       {
         url: 'https://rentverse-be.jokoyuliyanto.my.id',
         description: 'Production server',
