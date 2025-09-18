@@ -209,6 +209,26 @@ const router = express.Router();
  *                           type: integer
  *                         pages:
  *                           type: integer
+ *                     maps:
+ *                       type: object
+ *                       nullable: true
+ *                       description: Map coordinates with average location and property count
+ *                       properties:
+ *                         latMean:
+ *                           type: number
+ *                           format: float
+ *                           description: Average latitude of properties
+ *                         longMean:
+ *                           type: number
+ *                           format: float
+ *                           description: Average longitude of properties
+ *                         depth:
+ *                           type: integer
+ *                           description: Number of properties with valid coordinates
+ *                       example:
+ *                         latMean: 3.46541
+ *                         longMean: 101.44526
+ *                         depth: 10
  */
 router.get('/', propertiesController.getAllProperties);
 

@@ -57,8 +57,11 @@ async function seedProperties() {
         propertyTypeId: condominiumType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
-          'https://images.unsplash.com/photo-1560449752-6bb5e20a4e36?w=800'
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800', // Luxury living room
+          'https://images.unsplash.com/photo-1560449752-6bb5e20a4e36?w=800', // Modern bedroom
+          'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=800', // Kitchen view
+          'https://images.unsplash.com/photo-1582037928769-181f2644ecb7?w=800', // Bathroom
+          'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800'  // City skyline view
         ]
       },
       {
@@ -82,8 +85,11 @@ async function seedProperties() {
         propertyTypeId: apartmentType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
-          'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800'
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800', // Heritage apartment living
+          'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800', // Modern interior
+          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800', // Bedroom design
+          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800', // Kitchen area
+          'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?w=800'  // Heritage street view
         ]
       },
       {
@@ -107,8 +113,11 @@ async function seedProperties() {
         propertyTypeId: condominiumType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800',
-          'https://images.unsplash.com/photo-1631889993959-41b4e9b69dde?w=800'
+          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800', // Cozy studio
+          'https://images.unsplash.com/photo-1631889993959-41b4e9b69dde?w=800', // Modern compact living
+          'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800', // Studio kitchen
+          'https://images.unsplash.com/photo-1560448075-bb485b067938?w=800', // Compact bathroom
+          'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=800'  // Mont Kiara area view
         ]
       },
       {
@@ -132,8 +141,11 @@ async function seedProperties() {
         propertyTypeId: apartmentType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800',
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800'
+          'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800', // Family house exterior
+          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800', // Living room
+          'https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=800', // Master bedroom
+          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800', // Family kitchen
+          'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800'  // Garden/backyard
         ]
       },
       {
@@ -157,8 +169,11 @@ async function seedProperties() {
         propertyTypeId: condominiumType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
-          'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'
+          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800', // Beachfront condo
+          'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800', // Ocean view
+          'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800', // Beach bedroom
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800', // Living area
+          'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800'  // Balcony sea view
         ]
       },
       {
@@ -182,8 +197,11 @@ async function seedProperties() {
         propertyTypeId: condominiumType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800',
-          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800'
+          'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800', // Executive apartment
+          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800', // Premium interior
+          'https://images.unsplash.com/photo-1560449752-6bb5e20a4e36?w=800', // Master bedroom
+          'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=800', // Modern kitchen
+          'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800'  // Bangsar city view
         ]
       },
       {
@@ -207,8 +225,11 @@ async function seedProperties() {
         propertyTypeId: apartmentType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=800',
-          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800'
+          'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=800', // Budget room
+          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800', // Compact living
+          'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800', // Small kitchen
+          'https://images.unsplash.com/photo-1560448075-bb485b067938?w=800', // Bathroom
+          'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=800'  // Puchong area
         ]
       },
       {
@@ -232,8 +253,11 @@ async function seedProperties() {
         propertyTypeId: condominiumType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
-          'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800'
+          'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800', // Luxury villa exterior
+          'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800', // Villa interior
+          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800', // Master suite
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800', // Living area
+          'https://images.unsplash.com/photo-1544984243-ec57ea16fe25?w=800'  // Private pool
         ]
       },
       {
@@ -257,8 +281,11 @@ async function seedProperties() {
         propertyTypeId: condominiumType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800',
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800'
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800', // Serviced apartment
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800', // Modern living
+          'https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=800', // Tech-style bedroom
+          'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=800', // Smart kitchen
+          'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?w=800'  // Cyberjaya tech hub
         ]
       },
       {
@@ -282,8 +309,11 @@ async function seedProperties() {
         propertyTypeId: apartmentType.id,
         status: 'APPROVED',
         images: [
-          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800'
+          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800', // Historic shophouse
+          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800', // Traditional interior
+          'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?w=800', // Heritage street
+          'https://images.unsplash.com/photo-1582037928769-181f2644ecb7?w=800', // Restored bathroom
+          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800'  // Heritage kitchen
         ]
       }
     ];
