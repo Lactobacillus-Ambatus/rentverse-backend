@@ -57,7 +57,7 @@ async function seedUsers() {
 
   try {
     // Hash password for all demo users
-    const hashedPassword = await bcrypt.hash('password123', 12);
+    const hashedPassword = await bcrypt.hash('  ', 12);
 
     let createdCount = 0;
     let skippedCount = 0;

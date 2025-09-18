@@ -60,6 +60,33 @@ class PropertiesService {
     // Add Google Maps URL to each property
     const propertiesWithMapsUrl = this.addMapsUrlToProperties(properties);
 
+    // Calculate average longitude and latitude for maps
+    const validCoordinates = properties.filter(
+      property => property.latitude !== null && property.longitude !== null
+    );
+
+    let maps = null;
+    if (validCoordinates.length > 0) {
+      const totalLat = validCoordinates.reduce(
+        (sum, property) => sum + parseFloat(property.latitude),
+        0
+      );
+      const totalLng = validCoordinates.reduce(
+        (sum, property) => sum + parseFloat(property.longitude),
+        0
+      );
+
+      const latMean = totalLat / validCoordinates.length;
+      const longMean = totalLng / validCoordinates.length;
+      const depth = validCoordinates.length;
+
+      maps = {
+        latMean: latMean,
+        longMean: longMean,
+        depth: depth,
+      };
+    }
+
     return {
       properties: propertiesWithMapsUrl,
       pagination: {
@@ -68,6 +95,7 @@ class PropertiesService {
         total,
         pages,
       },
+      maps,
     };
   }
 
