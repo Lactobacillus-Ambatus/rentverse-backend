@@ -49,15 +49,24 @@ const users = [
     role: 'USER',
     isActive: true,
     verifiedAt: new Date()
+  },
+  {
+    email: 'superadmin@rentverse.com',
+    name: 'Super Admin',
+    phone: '+60123456780',
+    role: 'ADMIN',
+    isActive: true,
+    verifiedAt: new Date()
   }
+
 ];
 
 async function seedUsers() {
   console.log('👥 Starting users seeding...');
 
   try {
-    // Hash password for all demo users
-    const hashedPassword = await bcrypt.hash('  ', 12);
+    // Hash password for all demo users (using 'password123' as default)
+    const hashedPassword = await bcrypt.hash('password123', 12);
 
     let createdCount = 0;
     let skippedCount = 0;
@@ -75,10 +84,18 @@ async function seedUsers() {
           continue;
         }
 
+        // Determine password based on user
+        let userPassword = hashedPassword; // Default: 'password123'
+        
+        // Special handling for specific users
+        if (userData.email === 'superadmin@rentverse.com') {
+          userPassword = await bcrypt.hash('superadmin', 12);
+        }
+
         const user = await prisma.user.create({
           data: {
             ...userData,
-            password: hashedPassword
+            password: userPassword
           },
           select: {
             id: true,
@@ -113,9 +130,10 @@ async function seedUsers() {
       console.log(`   ${stat.role}: ${stat._count.id} users`);
     }
 
-    console.log('\n🔑 Demo Credentials (password: password123):');
+    console.log('\n🔑 Demo Credentials:');
     for (const user of users) {
-      console.log(`   ${user.role}: ${user.email}`);
+      const password = user.email === 'superadmin@rentverse.com' ? 'superadmin' : 'password123';
+      console.log(`   ${user.role}: ${user.email} / ${password}`);
     }
 
     return { success: true, created: createdCount };
