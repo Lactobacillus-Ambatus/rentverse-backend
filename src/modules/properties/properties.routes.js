@@ -319,7 +319,7 @@ router.get('/property/:code', propertiesController.getPropertyByCode);
 
 /**
  * @swagger
- * /properties.geojson:
+ * /api/properties.geojson:
  *   get:
  *     summary: Get property data in GeoJSON format for high-performance map rendering
  *     tags: [Properties]
@@ -425,7 +425,7 @@ router.get('/geojson', propertiesController.getGeoJSON);
 
 /**
  * @swagger
- * /properties/{id}:
+ * /api/properties/{id}:
  *   get:
  *     summary: Get property by ID
  *     tags: [Properties]
