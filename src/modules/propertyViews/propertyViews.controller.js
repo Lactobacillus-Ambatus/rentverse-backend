@@ -310,6 +310,147 @@ class PropertyViewsController {
       });
     }
   }
+
+  // ==================== FAVORITE METHODS ====================
+
+  /**
+   * Toggle property favorite status
+   * POST /api/properties/:id/favorite
+   */
+  async toggleFavorite(req, res) {
+    try {
+      const { id: propertyId } = req.params;
+      const userId = req.user.id; // Required for favorites
+
+      const result = await propertiesService.toggleFavorite(propertyId, userId);
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          action: result.action,
+          isFavorited: result.isFavorited,
+          favoriteCount: result.favoriteCount,
+        },
+      });
+    } catch (error) {
+      console.error('Toggle favorite error:', error);
+
+      if (error.message === 'Property not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Property not found',
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error:
+          process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
+
+  /**
+   * Get user's favorite properties
+   * GET /api/properties/favorites
+   */
+  async getUserFavorites(req, res) {
+    try {
+      const userId = req.user.id;
+      const { page = 1, limit = 10 } = req.query;
+
+      const result = await propertiesService.getUserFavorites(userId, {
+        page: parseInt(page),
+        limit: parseInt(limit),
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get user favorites error:', error);
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error:
+          process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
+
+  /**
+   * Get property favorite status
+   * GET /api/properties/:id/favorite-status
+   */
+  async getFavoriteStatus(req, res) {
+    try {
+      const { id: propertyId } = req.params;
+      const userId = req.user.id;
+
+      const result = await propertiesService.getFavoriteStatus(
+        propertyId,
+        userId
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get favorite status error:', error);
+
+      if (error.message === 'Property not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Property not found',
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error:
+          process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
+
+  /**
+   * Get property favorite statistics
+   * GET /api/properties/:id/favorite-stats
+   */
+  async getFavoriteStats(req, res) {
+    try {
+      const { id: propertyId } = req.params;
+
+      const result = await propertiesService.getFavoriteStats(propertyId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get favorite stats error:', error);
+
+      if (error.message === 'Property not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Property not found',
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error:
+          process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
 }
 
 module.exports = new PropertyViewsController();

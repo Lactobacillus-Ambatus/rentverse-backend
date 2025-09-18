@@ -6,6 +6,7 @@ class PropertiesController {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
+      const userId = req.user?.id; // Get user ID if authenticated
 
       const filters = {
         propertyTypeId: req.query.propertyTypeId,
@@ -21,7 +22,8 @@ class PropertiesController {
       const result = await propertiesService.getAllProperties(
         page,
         limit,
-        filters
+        filters,
+        userId
       );
 
       res.json({
@@ -40,7 +42,11 @@ class PropertiesController {
   async getPropertyById(req, res) {
     try {
       const propertyId = req.params.id;
-      const property = await propertiesService.getPropertyById(propertyId);
+      const userId = req.user?.id; // Get user ID if authenticated
+      const property = await propertiesService.getPropertyById(
+        propertyId,
+        userId
+      );
 
       res.json({
         success: true,
@@ -66,7 +72,11 @@ class PropertiesController {
   async getPropertyByCode(req, res) {
     try {
       const propertyCode = req.params.code;
-      const property = await propertiesService.getPropertyByCode(propertyCode);
+      const userId = req.user?.id; // Get user ID if authenticated
+      const property = await propertiesService.getPropertyByCode(
+        propertyCode,
+        userId
+      );
 
       res.json({
         success: true,
@@ -279,8 +289,13 @@ class PropertiesController {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 8;
+      const userId = req.user?.id; // Get user ID if authenticated
 
-      const result = await propertiesService.getFeaturedProperties(page, limit);
+      const result = await propertiesService.getFeaturedProperties(
+        page,
+        limit,
+        userId
+      );
 
       res.json({
         success: true,

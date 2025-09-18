@@ -85,7 +85,46 @@ class PropertiesService {
     }));
   }
 
-  async getAllProperties(page = 1, limit = 10, filters = {}) {
+  // Helper function to add favorite info to property (for authenticated users)
+  async addFavoriteInfoToProperty(property, userId = null) {
+    if (property && userId) {
+      const [isFavorited, favoriteCount] = await Promise.all([
+        this.propertyViewsRepository.isFavorited(property.id, userId),
+        this.propertyViewsRepository.getFavoriteCount(property.id),
+      ]);
+      property.isFavorited = isFavorited;
+      property.favoriteCount = favoriteCount;
+    } else if (property) {
+      // For non-authenticated users, just add favorite count
+      const favoriteCount = await this.propertyViewsRepository.getFavoriteCount(
+        property.id
+      );
+      property.isFavorited = false;
+      property.favoriteCount = favoriteCount;
+    }
+    return property;
+  }
+
+  // Helper function to add favorite info to multiple properties
+  async addFavoriteInfoToProperties(properties, userId = null) {
+    if (!properties || properties.length === 0) return properties;
+
+    const propertyIds = properties.map(p => p.id);
+    const [favoriteStatus, favoriteCounts] = await Promise.all([
+      userId
+        ? this.propertyViewsRepository.getFavoriteStatus(propertyIds, userId)
+        : null,
+      this.propertyViewsRepository.getFavoriteCounts(propertyIds),
+    ]);
+
+    return properties.map(property => ({
+      ...property,
+      isFavorited: favoriteStatus ? favoriteStatus[property.id] : false,
+      favoriteCount: favoriteCounts[property.id] || 0,
+    }));
+  }
+
+  async getAllProperties(page = 1, limit = 10, filters = {}, userId = null) {
     const skip = (page - 1) * limit;
     const where = {};
 
@@ -113,13 +152,17 @@ class PropertiesService {
 
     const pages = Math.ceil(total / limit);
 
-    // Add Google Maps URL, view count, and rating stats to each property
+    // Add Google Maps URL, view count, rating stats, and favorite info to each property
     const propertiesWithMapsUrl = this.addMapsUrlToProperties(properties);
     const propertiesWithViewCount = await this.addViewCountToProperties(
       propertiesWithMapsUrl
     );
     const propertiesWithRatings = await this.addRatingStatsToProperties(
       propertiesWithViewCount
+    );
+    const propertiesWithFavorites = await this.addFavoriteInfoToProperties(
+      propertiesWithRatings,
+      userId
     );
 
     // Calculate average longitude and latitude for maps
@@ -150,7 +193,7 @@ class PropertiesService {
     }
 
     return {
-      properties: propertiesWithRatings,
+      properties: propertiesWithFavorites,
       pagination: {
         page,
         limit,
@@ -161,32 +204,38 @@ class PropertiesService {
     };
   }
 
-  async getPropertyById(id) {
+  async getPropertyById(id, userId = null) {
     const property = await propertiesRepository.findById(id);
 
     if (!property) {
       throw new Error('Property not found');
     }
 
-    // Add Google Maps URL, view count, and rating stats to the property
+    // Add Google Maps URL, view count, rating stats, and favorite info to the property
     const propertyWithMapsUrl = this.addMapsUrlToProperty(property);
     const propertyWithViewCount =
       await this.addViewCountToProperty(propertyWithMapsUrl);
-    return await this.addRatingStatsToProperty(propertyWithViewCount);
+    const propertyWithRatings = await this.addRatingStatsToProperty(
+      propertyWithViewCount
+    );
+    return await this.addFavoriteInfoToProperty(propertyWithRatings, userId);
   }
 
-  async getPropertyByCode(code) {
+  async getPropertyByCode(code, userId = null) {
     const property = await propertiesRepository.findByCode(code);
 
     if (!property) {
       throw new Error('Property not found');
     }
 
-    // Add Google Maps URL, view count, and rating stats to the property
+    // Add Google Maps URL, view count, rating stats, and favorite info to the property
     const propertyWithMaps = this.addMapsUrlToProperty(property);
     const propertyWithViewCount =
       await this.addViewCountToProperty(propertyWithMaps);
-    return await this.addRatingStatsToProperty(propertyWithViewCount);
+    const propertyWithRatings = await this.addRatingStatsToProperty(
+      propertyWithViewCount
+    );
+    return await this.addFavoriteInfoToProperty(propertyWithRatings, userId);
   }
 
   async createProperty(propertyData, ownerId) {
@@ -466,7 +515,7 @@ class PropertiesService {
     }
   }
 
-  async getFeaturedProperties(page = 1, limit = 8) {
+  async getFeaturedProperties(page = 1, limit = 8, userId = null) {
     const skip = (page - 1) * limit;
 
     const [properties, total] = await Promise.all([
@@ -476,7 +525,7 @@ class PropertiesService {
 
     const pages = Math.ceil(total / limit);
 
-    // Add Google Maps URL, view count, and rating stats to each property
+    // Add Google Maps URL, view count, rating stats, and favorite info to each property
     const propertiesWithMapsUrl = this.addMapsUrlToProperties(properties);
     const propertiesWithViewCount = await this.addViewCountToProperties(
       propertiesWithMapsUrl
@@ -484,9 +533,13 @@ class PropertiesService {
     const propertiesWithRatings = await this.addRatingStatsToProperties(
       propertiesWithViewCount
     );
+    const propertiesWithFavorites = await this.addFavoriteInfoToProperties(
+      propertiesWithRatings,
+      userId
+    );
 
     return {
-      properties: propertiesWithRatings,
+      properties: propertiesWithFavorites,
       pagination: {
         page,
         limit,
@@ -512,26 +565,7 @@ class PropertiesService {
       throw new Error('Property not found');
     }
 
-    // Check for recent view to prevent spam (optional anti-spam mechanism)
-    const hasRecentView = await this.propertyViewsRepository.hasRecentView(
-      propertyId,
-      viewData.userId,
-      viewData.ipAddress,
-      5 // 5 minutes cooldown
-    );
-
-    if (hasRecentView) {
-      // Still return success but don't create duplicate view
-      return {
-        property: await this.addViewCountToProperty(
-          this.addMapsUrlToProperty(property)
-        ),
-        viewLogged: false,
-        message: 'View already recorded recently',
-      };
-    }
-
-    // Log the view
+    // Log the view directly without anti-spam check
     await this.propertyViewsRepository.logView({
       propertyId,
       userId: viewData.userId || null,
@@ -539,13 +573,20 @@ class PropertiesService {
       userAgent: viewData.userAgent || null,
     });
 
-    // Return property with updated view count
-    const updatedProperty = await this.addViewCountToProperty(
-      this.addMapsUrlToProperty(property)
+    // Return property with updated view count and all related data
+    const propertyWithMapsUrl = this.addMapsUrlToProperty(property);
+    const propertyWithViewCount =
+      await this.addViewCountToProperty(propertyWithMapsUrl);
+    const propertyWithRatings = await this.addRatingStatsToProperty(
+      propertyWithViewCount
+    );
+    const propertyWithFavorites = await this.addFavoriteInfoToProperty(
+      propertyWithRatings,
+      viewData.userId
     );
 
     return {
-      property: updatedProperty,
+      property: propertyWithFavorites,
       viewLogged: true,
       message: 'View logged successfully',
     };
@@ -681,6 +722,139 @@ class PropertiesService {
     }
 
     return await this.propertyViewsRepository.getRatingStats(propertyId);
+  }
+
+  // ==================== FAVORITE METHODS ====================
+
+  /**
+   * Add or remove property from favorites
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Result
+   */
+  async toggleFavorite(propertyId, userId) {
+    // First check if property exists
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    const isFavorited = await this.propertyViewsRepository.isFavorited(
+      propertyId,
+      userId
+    );
+
+    if (isFavorited) {
+      // Remove from favorites
+      await this.propertyViewsRepository.removeFromFavorites(
+        propertyId,
+        userId
+      );
+
+      return {
+        action: 'removed',
+        isFavorited: false,
+        favoriteCount:
+          await this.propertyViewsRepository.getFavoriteCount(propertyId),
+        message: 'Property removed from favorites',
+      };
+    } else {
+      // Add to favorites
+      await this.propertyViewsRepository.addToFavorites(propertyId, userId);
+
+      return {
+        action: 'added',
+        isFavorited: true,
+        favoriteCount:
+          await this.propertyViewsRepository.getFavoriteCount(propertyId),
+        message: 'Property added to favorites',
+      };
+    }
+  }
+
+  /**
+   * Get user's favorite properties
+   * @param {string} userId - User ID
+   * @param {Object} options - Options
+   * @param {number} [options.page=1] - Page number
+   * @param {number} [options.limit=10] - Items per page
+   * @returns {Promise<Object>} Favorite properties with pagination
+   */
+  async getUserFavorites(userId, options = {}) {
+    const { page = 1, limit = 10 } = options;
+    const result = await this.propertyViewsRepository.getUserFavorites({
+      userId,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+
+    // Extract properties from favorites (which contains {favoritedAt, property})
+    const properties = result.favorites.map(fav => fav.property);
+
+    // Add Maps URL, view count, rating stats, and favorite info to each property
+    const propertiesWithMapsUrl = this.addMapsUrlToProperties(properties);
+    const propertiesWithViewCount = await this.addViewCountToProperties(
+      propertiesWithMapsUrl
+    );
+    const propertiesWithRatings = await this.addRatingStatsToProperties(
+      propertiesWithViewCount
+    );
+    const propertiesWithFavorites = await this.addFavoriteInfoToProperties(
+      propertiesWithRatings,
+      userId
+    );
+
+    return {
+      favorites: propertiesWithFavorites,
+      pagination: result.pagination,
+    };
+  }
+
+  /**
+   * Check if property is favorited by user
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Favorite status
+   */
+  async getFavoriteStatus(propertyId, userId) {
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    const [isFavorited, favoriteCount] = await Promise.all([
+      this.propertyViewsRepository.isFavorited(propertyId, userId),
+      this.propertyViewsRepository.getFavoriteCount(propertyId),
+    ]);
+
+    return {
+      propertyId,
+      isFavorited,
+      favoriteCount,
+    };
+  }
+
+  /**
+   * Get property favorite statistics
+   * @param {string} propertyId - Property ID
+   * @returns {Promise<Object>} Favorite statistics
+   */
+  async getFavoriteStats(propertyId) {
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    const favoriteCount =
+      await this.propertyViewsRepository.getFavoriteCount(propertyId);
+    const recentFavorites =
+      await this.propertyViewsRepository.getRecentFavorites(propertyId, 10);
+
+    return {
+      propertyId,
+      favoriteCount,
+      recentFavorites,
+    };
   }
 }
 

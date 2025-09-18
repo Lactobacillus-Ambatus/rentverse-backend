@@ -100,6 +100,14 @@ const router = express.Router();
  *           type: integer
  *           description: Total number of ratings/reviews for this property
  *           example: 15
+ *         isFavorited:
+ *           type: boolean
+ *           description: Whether the current user has favorited this property (false for unauthenticated users)
+ *           example: true
+ *         favoriteCount:
+ *           type: integer
+ *           description: Total number of users who have favorited this property
+ *           example: 8
  *         propertyType:
  *           $ref: '#/components/schemas/PropertyType'
  *         amenities:
@@ -132,6 +140,11 @@ const router = express.Router();
  *         bathrooms: 1
  *         area: 850.5
  *         isAvailable: true
+ *         viewCount: 42
+ *         averageRating: 4.2
+ *         totalRatings: 15
+ *         isFavorited: true
+ *         favoriteCount: 8
  *         images: ["https://example.com/image1.jpg"]
  *         amenities: ["WiFi", "Air Conditioning", "Parking"]
  *         createdAt: 2023-01-01T00:00:00.000Z
@@ -297,6 +310,65 @@ router.get('/', propertiesController.getAllProperties);
  *         description: Internal server error
  */
 router.get('/featured', propertiesController.getFeaturedProperties);
+
+/**
+ * @swagger
+ * /api/properties/favorites:
+ *   get:
+ *     summary: Get user's favorite properties
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: User's favorite properties
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     favorites:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Property'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/favorites', auth, propertyViewsController.getUserFavorites);
 
 /**
  * @swagger
@@ -1257,5 +1329,168 @@ router.get('/:id/my-rating', auth, propertyViewsController.getUserRating);
  *         description: Internal server error
  */
 router.get('/:id/rating-stats', propertyViewsController.getRatingStats);
+
+// ==================== FAVORITE ROUTES ====================
+
+/**
+ * @swagger
+ * /api/properties/{id}/favorite:
+ *   post:
+ *     summary: Toggle property favorite status (add/remove from favorites)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to toggle favorite status
+ *     responses:
+ *       200:
+ *         description: Favorite status toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                   example: "Property added to favorites"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: string
+ *                       enum: [added, removed]
+ *                       description: Action performed
+ *                       example: "added"
+ *                     isFavorited:
+ *                       type: boolean
+ *                       description: Current favorite status
+ *                       example: true
+ *                     favoriteCount:
+ *                       type: integer
+ *                       description: Total number of users who favorited this property
+ *                       example: 12
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/:id/favorite', auth, propertyViewsController.toggleFavorite);
+
+/**
+ * @swagger
+ * /api/properties/{id}/favorite-status:
+ *   get:
+ *     summary: Get property favorite status for current user
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to check favorite status
+ *     responses:
+ *       200:
+ *         description: Property favorite status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     propertyId:
+ *                       type: string
+ *                       description: Property UUID
+ *                       example: "123e4567-e89b-12d3-a456-426614174000"
+ *                     isFavorited:
+ *                       type: boolean
+ *                       description: Whether this property is favorited by current user
+ *                       example: true
+ *                     favoriteCount:
+ *                       type: integer
+ *                       description: Total number of users who favorited this property
+ *                       example: 12
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  '/:id/favorite-status',
+  auth,
+  propertyViewsController.getFavoriteStatus
+);
+
+/**
+ * @swagger
+ * /api/properties/{id}/favorite-stats:
+ *   get:
+ *     summary: Get property favorite statistics (public)
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to get favorite stats
+ *     responses:
+ *       200:
+ *         description: Property favorite statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     propertyId:
+ *                       type: string
+ *                       description: Property UUID
+ *                       example: "123e4567-e89b-12d3-a456-426614174000"
+ *                     favoriteCount:
+ *                       type: integer
+ *                       description: Total number of users who favorited this property
+ *                       example: 12
+ *                     recentFavorites:
+ *                       type: array
+ *                       description: Recent users who favorited this property (limited info)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/favorite-stats', propertyViewsController.getFavoriteStats);
 
 module.exports = router;
