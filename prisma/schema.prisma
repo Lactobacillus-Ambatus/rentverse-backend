@@ -37,7 +37,10 @@ model Amenity {
 model User {
   id               String            @id @default(uuid())
   email            String            @unique
-  name             String
+  firstName        String            @default("")
+  lastName         String            @default("")
+  name             String            // Computed field (firstName + lastName) for backward compatibility
+  dateOfBirth      DateTime?
   phone            String?
   password         String
   role             Role              @default(USER)
