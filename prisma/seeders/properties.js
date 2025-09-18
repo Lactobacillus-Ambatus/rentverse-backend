@@ -6,11 +6,11 @@ async function seedProperties() {
   try {
     // Get required data first
     const landlord = await prisma.user.findFirst({
-      where: { role: 'LANDLORD' }
+      where: { role: 'USER' }
     });
 
     if (!landlord) {
-      throw new Error('No landlord found. Please run users seeder first.');
+      throw new Error('No user found. Please run users seeder first.');
     }
 
     const apartmentType = await prisma.propertyType.findUnique({

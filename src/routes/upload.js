@@ -210,7 +210,7 @@ router.post(
 router.post(
   '/property-images',
   auth,
-  authorize('LANDLORD', 'ADMIN'),
+  authorize('USER', 'ADMIN'),
   uploadMultiple('files', 10),
   uploadController.uploadPropertyImages
 );

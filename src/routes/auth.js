@@ -77,9 +77,9 @@ router.use(passport.initialize());
 
 /**
  * @swagger
- * /api/auth/register/user:
+ * /api/auth/register:
  *   post:
- *     summary: Register a new user (tenant)
+ *     summary: Register a new user
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -100,7 +100,7 @@ router.use(passport.initialize());
  *         description: User already exists
  */
 router.post(
-  '/register/user',
+  '/register',
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
@@ -141,7 +141,7 @@ router.post(
           password: hashedPassword,
           name,
           phone: phone || null,
-          role: 'TENANT',
+          role: 'USER',
         },
         select: {
           id: true,
@@ -171,110 +171,6 @@ router.post(
       });
     } catch (error) {
       console.error('User registration error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      });
-    }
-  }
-);
-
-/**
- * @swagger
- * /api/auth/register/landlord:
- *   post:
- *     summary: Register a new landlord (property owner)
- *     tags: [Authentication]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RegisterRequest'
- *     responses:
- *       201:
- *         description: Landlord registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
- *       400:
- *         description: Bad request
- *       409:
- *         description: User already exists
- */
-router.post(
-  '/register/landlord',
-  [
-    body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 6 }),
-    body('name').notEmpty().trim(),
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array(),
-        });
-      }
-
-      const { email, password, name, phone } = req.body;
-
-      // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
-      });
-
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          message: 'User already exists with this email',
-        });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 12);
-
-      // Create user with LANDLORD role
-      const user = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name,
-          phone: phone || null,
-          role: 'LANDLORD',
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          phone: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-        },
-      });
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-      );
-
-      res.status(201).json({
-        success: true,
-        message: 'Landlord registered successfully',
-        data: {
-          user,
-          token,
-        },
-      });
-    } catch (error) {
-      console.error('Landlord registration error:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
