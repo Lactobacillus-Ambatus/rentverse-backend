@@ -42,6 +42,7 @@ model User {
   name             String            // Computed field (firstName + lastName) for backward compatibility
   dateOfBirth      DateTime?
   phone            String?
+  profilePicture   String?           // URL for user's profile picture
   password         String
   role             Role              @default(USER)
   isActive         Boolean           @default(true)
