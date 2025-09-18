@@ -14,7 +14,7 @@ const users = [
     email: 'landlord@rentverse.com', 
     name: 'John Landlord',
     phone: '+60123456788',
-    role: 'LANDLORD',
+    role: 'USER',
     isActive: true,
     verifiedAt: new Date()
   },
@@ -22,7 +22,7 @@ const users = [
     email: 'tenant@rentverse.com',
     name: 'Jane Tenant', 
     phone: '+60123456787',
-    role: 'TENANT',
+    role: 'USER',
     isActive: true,
     verifiedAt: new Date()
   },
@@ -30,7 +30,7 @@ const users = [
     email: 'landlord2@rentverse.com',
     name: 'Ahmad Rahman',
     phone: '+60987654321',
-    role: 'LANDLORD',
+    role: 'USER',
     isActive: true,
     verifiedAt: new Date()
   },
@@ -38,7 +38,7 @@ const users = [
     email: 'tenant2@rentverse.com',
     name: 'Siti Aminah',
     phone: '+60987654322',
-    role: 'TENANT', 
+    role: 'USER', 
     isActive: true,
     verifiedAt: new Date()
   },
@@ -46,7 +46,7 @@ const users = [
     email: 'landlord3@rentverse.com',
     name: 'Lim Wei Ming',
     phone: '+60987654323',
-    role: 'LANDLORD',
+    role: 'USER',
     isActive: true,
     verifiedAt: new Date()
   }

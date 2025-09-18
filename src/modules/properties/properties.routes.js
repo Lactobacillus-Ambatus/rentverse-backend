@@ -586,7 +586,7 @@ router.get('/:id', propertiesController.getPropertyById);
 router.post(
   '/',
   auth,
-  authorize('LANDLORD', 'ADMIN'),
+  authorize('USER', 'ADMIN'),
   [
     body('code').optional().trim().isLength({ max: 50 }),
     body('title').notEmpty().trim(),
@@ -742,7 +742,7 @@ router.post(
 router.put(
   '/:id',
   auth,
-  authorize('LANDLORD', 'ADMIN'),
+  authorize('USER', 'ADMIN'),
   [
     body('title').optional().notEmpty().trim(),
     body('description').optional().trim(),
@@ -800,7 +800,7 @@ router.put(
 router.delete(
   '/:id',
   auth,
-  authorize('LANDLORD', 'ADMIN'),
+  authorize('USER', 'ADMIN'),
   propertiesController.deleteProperty
 );
 

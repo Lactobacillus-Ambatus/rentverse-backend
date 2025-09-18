@@ -31,7 +31,7 @@ const swaggerOptions = {
         description: 'Local development server',
       },
       {
-        url: 'https://api.rentverse.com',
+        url: 'https://rentverse-backend.jokoyuliyanto.my.id',
         description: 'Production server',
       },
     ],

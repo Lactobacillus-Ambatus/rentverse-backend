@@ -8,8 +8,6 @@ class BookingsService {
 
     // Apply role-based filtering
     if (requestingUser.role === 'USER') {
-      where.userId = requestingUser.id;
-    } else if (requestingUser.role === 'LANDLORD') {
       where.OR = [
         { userId: requestingUser.id }, // Their own bookings
         { property: { ownerId: requestingUser.id } }, // Bookings for their properties

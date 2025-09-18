@@ -27,7 +27,7 @@ const router = express.Router();
  *           description: The phone number of the user
  *         role:
  *           type: string
- *           enum: [TENANT, LANDLORD, ADMIN]
+ *           enum: [USER, ADMIN]
  *           description: The role of the user
  *         isActive:
  *           type: boolean
@@ -49,7 +49,7 @@ const router = express.Router();
  *         email: john.doe@example.com
  *         name: John Doe
  *         phone: "+1234567890"
- *         role: TENANT
+ *         role: USER
  *         isActive: true
  *         createdAt: 2023-01-01T00:00:00.000Z
  *         updatedAt: 2023-01-01T00:00:00.000Z
@@ -98,8 +98,8 @@ const router = express.Router();
  *                 description: The password for the user
  *               role:
  *                 type: string
- *                 enum: [TENANT, LANDLORD, ADMIN]
- *                 default: TENANT
+ *                 enum: [USER, ADMIN]
+ *                 default: USER
  *                 description: The role of the user
  *               isActive:
  *                 type: boolean
@@ -110,7 +110,7 @@ const router = express.Router();
  *               name: John Doe
  *               phone: "+1234567890"
  *               password: "securepassword123"
- *               role: TENANT
+ *               role: USER
  *               isActive: true
  *     responses:
  *       201:
@@ -158,8 +158,8 @@ router.post(
     body('phone').optional().trim(),
     body('role')
       .optional()
-      .isIn(['TENANT', 'LANDLORD', 'ADMIN'])
-      .withMessage('Role must be one of: TENANT, LANDLORD, ADMIN'),
+      .isIn(['USER', 'ADMIN'])
+      .withMessage('Role must be one of: USER, ADMIN'),
     body('isActive')
       .optional()
       .isBoolean()
@@ -193,7 +193,7 @@ router.post(
  *         name: role
  *         schema:
  *           type: string
- *           enum: [TENANT, LANDLORD, ADMIN]
+ *           enum: [USER, ADMIN]
  *         description: Filter by user role
  *     responses:
  *       200:
@@ -297,7 +297,7 @@ router.get('/:id', auth, usersController.getUserById);
  *                 type: string
  *               role:
  *                 type: string
- *                 enum: [USER, LANDLORD, ADMIN]
+ *                 enum: [USER, ADMIN]
  *               isActive:
  *                 type: boolean
  *     responses:
@@ -330,7 +330,7 @@ router.put(
   [
     body('name').optional().trim().notEmpty(),
     body('phone').optional().trim(),
-    body('role').optional().isIn(['TENANT', 'LANDLORD', 'ADMIN']),
+    body('role').optional().isIn(['USER', 'ADMIN']),
     body('isActive').optional().isBoolean(),
   ],
   usersController.updateUser
