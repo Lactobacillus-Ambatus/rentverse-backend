@@ -1,8 +1,12 @@
 const propertiesRepository = require('./properties.repository');
+const PropertyViewsRepository = require('../propertyViews/propertyViews.repository');
 const { generateUniquePropertyCode } = require('../../utils/codeGenerator');
 const { prisma } = require('../../config/database');
 
 class PropertiesService {
+  constructor() {
+    this.propertyViewsRepository = new PropertyViewsRepository();
+  }
   // Helper function to generate Google Maps URL
   generateMapsUrl(latitude, longitude) {
     if (!latitude || !longitude) return null;
@@ -27,6 +31,58 @@ class PropertiesService {
   // Helper function to add maps URL to multiple properties
   addMapsUrlToProperties(properties) {
     return properties.map(property => this.addMapsUrlToProperty(property));
+  }
+
+  // Helper function to add view count to property
+  async addViewCountToProperty(property) {
+    if (property) {
+      const viewCount = await this.propertyViewsRepository.getViewCount(
+        property.id
+      );
+      property.viewCount = viewCount;
+    }
+    return property;
+  }
+
+  // Helper function to add view count to multiple properties
+  async addViewCountToProperties(properties) {
+    if (!properties || properties.length === 0) return properties;
+
+    const propertyIds = properties.map(p => p.id);
+    const viewCounts =
+      await this.propertyViewsRepository.getViewCounts(propertyIds);
+
+    return properties.map(property => ({
+      ...property,
+      viewCount: viewCounts[property.id] || 0,
+    }));
+  }
+
+  // Helper function to add rating stats to property
+  async addRatingStatsToProperty(property) {
+    if (property) {
+      const ratingStats = await this.propertyViewsRepository.getRatingStats(
+        property.id
+      );
+      property.averageRating = ratingStats.averageRating;
+      property.totalRatings = ratingStats.totalRatings;
+    }
+    return property;
+  }
+
+  // Helper function to add rating stats to multiple properties
+  async addRatingStatsToProperties(properties) {
+    if (!properties || properties.length === 0) return properties;
+
+    const propertyIds = properties.map(p => p.id);
+    const ratingStats =
+      await this.propertyViewsRepository.getRatingStatsMultiple(propertyIds);
+
+    return properties.map(property => ({
+      ...property,
+      averageRating: ratingStats[property.id]?.averageRating || 0,
+      totalRatings: ratingStats[property.id]?.totalRatings || 0,
+    }));
   }
 
   async getAllProperties(page = 1, limit = 10, filters = {}) {
@@ -57,8 +113,14 @@ class PropertiesService {
 
     const pages = Math.ceil(total / limit);
 
-    // Add Google Maps URL to each property
+    // Add Google Maps URL, view count, and rating stats to each property
     const propertiesWithMapsUrl = this.addMapsUrlToProperties(properties);
+    const propertiesWithViewCount = await this.addViewCountToProperties(
+      propertiesWithMapsUrl
+    );
+    const propertiesWithRatings = await this.addRatingStatsToProperties(
+      propertiesWithViewCount
+    );
 
     // Calculate average longitude and latitude for maps
     const validCoordinates = properties.filter(
@@ -88,7 +150,7 @@ class PropertiesService {
     }
 
     return {
-      properties: propertiesWithMapsUrl,
+      properties: propertiesWithRatings,
       pagination: {
         page,
         limit,
@@ -106,8 +168,11 @@ class PropertiesService {
       throw new Error('Property not found');
     }
 
-    // Add Google Maps URL to the property
-    return this.addMapsUrlToProperty(property);
+    // Add Google Maps URL, view count, and rating stats to the property
+    const propertyWithMapsUrl = this.addMapsUrlToProperty(property);
+    const propertyWithViewCount =
+      await this.addViewCountToProperty(propertyWithMapsUrl);
+    return await this.addRatingStatsToProperty(propertyWithViewCount);
   }
 
   async getPropertyByCode(code) {
@@ -117,8 +182,11 @@ class PropertiesService {
       throw new Error('Property not found');
     }
 
-    // Add Google Maps URL to the property
-    return this.addMapsUrlToProperty(property);
+    // Add Google Maps URL, view count, and rating stats to the property
+    const propertyWithMaps = this.addMapsUrlToProperty(property);
+    const propertyWithViewCount =
+      await this.addViewCountToProperty(propertyWithMaps);
+    return await this.addRatingStatsToProperty(propertyWithViewCount);
   }
 
   async createProperty(propertyData, ownerId) {
@@ -408,11 +476,17 @@ class PropertiesService {
 
     const pages = Math.ceil(total / limit);
 
-    // Add Google Maps URL to each property
+    // Add Google Maps URL, view count, and rating stats to each property
     const propertiesWithMapsUrl = this.addMapsUrlToProperties(properties);
+    const propertiesWithViewCount = await this.addViewCountToProperties(
+      propertiesWithMapsUrl
+    );
+    const propertiesWithRatings = await this.addRatingStatsToProperties(
+      propertiesWithViewCount
+    );
 
     return {
-      properties: propertiesWithMapsUrl,
+      properties: propertiesWithRatings,
       pagination: {
         page,
         limit,
@@ -420,6 +494,193 @@ class PropertiesService {
         pages,
       },
     };
+  }
+
+  /**
+   * Log property view
+   * @param {string} propertyId - Property ID
+   * @param {Object} viewData - View data
+   * @param {string} [viewData.userId] - User ID (optional for guests)
+   * @param {string} [viewData.ipAddress] - IP address
+   * @param {string} [viewData.userAgent] - User agent
+   * @returns {Promise<Object>} Created view record
+   */
+  async logPropertyView(propertyId, viewData = {}) {
+    // First check if property exists
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    // Check for recent view to prevent spam (optional anti-spam mechanism)
+    const hasRecentView = await this.propertyViewsRepository.hasRecentView(
+      propertyId,
+      viewData.userId,
+      viewData.ipAddress,
+      5 // 5 minutes cooldown
+    );
+
+    if (hasRecentView) {
+      // Still return success but don't create duplicate view
+      return {
+        property: await this.addViewCountToProperty(
+          this.addMapsUrlToProperty(property)
+        ),
+        viewLogged: false,
+        message: 'View already recorded recently',
+      };
+    }
+
+    // Log the view
+    await this.propertyViewsRepository.logView({
+      propertyId,
+      userId: viewData.userId || null,
+      ipAddress: viewData.ipAddress || null,
+      userAgent: viewData.userAgent || null,
+    });
+
+    // Return property with updated view count
+    const updatedProperty = await this.addViewCountToProperty(
+      this.addMapsUrlToProperty(property)
+    );
+
+    return {
+      property: updatedProperty,
+      viewLogged: true,
+      message: 'View logged successfully',
+    };
+  }
+
+  /**
+   * Get property view statistics
+   * @param {string} propertyId - Property ID
+   * @param {number} [days=30] - Number of days to look back
+   * @returns {Promise<Object>} View statistics
+   */
+  async getPropertyViewStats(propertyId, days = 30) {
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    return await this.propertyViewsRepository.getViewStats(propertyId, days);
+  }
+
+  // ==================== RATING METHODS ====================
+
+  /**
+   * Create or update property rating
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @param {Object} ratingData - Rating data
+   * @param {number} ratingData.rating - Rating (1-5)
+   * @param {string} [ratingData.comment] - Optional comment
+   * @returns {Promise<Object>} Created/updated rating
+   */
+  async createOrUpdateRating(propertyId, userId, ratingData) {
+    // First check if property exists
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    // Validate rating value
+    const { rating, comment } = ratingData;
+    if (!rating || rating < 1 || rating > 5) {
+      throw new Error('Rating must be between 1 and 5');
+    }
+
+    // Create or update rating
+    const ratingRecord =
+      await this.propertyViewsRepository.createOrUpdateRating({
+        propertyId,
+        userId,
+        rating: parseInt(rating),
+        comment: comment || null,
+      });
+
+    return {
+      rating: ratingRecord,
+      message: 'Rating submitted successfully',
+    };
+  }
+
+  /**
+   * Get property ratings with pagination
+   * @param {string} propertyId - Property ID
+   * @param {Object} options - Options
+   * @param {number} [options.page=1] - Page number
+   * @param {number} [options.limit=10] - Items per page
+   * @returns {Promise<Object>} Ratings with pagination
+   */
+  async getPropertyRatings(propertyId, options = {}) {
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    const { page = 1, limit = 10 } = options;
+    return await this.propertyViewsRepository.getPropertyRatings({
+      propertyId,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  }
+
+  /**
+   * Get user's rating for a property
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object|null>} User's rating or null
+   */
+  async getUserRating(propertyId, userId) {
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    return await this.propertyViewsRepository.getUserRating(propertyId, userId);
+  }
+
+  /**
+   * Delete user's rating
+   * @param {string} propertyId - Property ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Result
+   */
+  async deleteRating(propertyId, userId) {
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    const existingRating = await this.propertyViewsRepository.getUserRating(
+      propertyId,
+      userId
+    );
+    if (!existingRating) {
+      throw new Error('Rating not found');
+    }
+
+    await this.propertyViewsRepository.deleteRating(propertyId, userId);
+
+    return {
+      message: 'Rating deleted successfully',
+    };
+  }
+
+  /**
+   * Get detailed rating statistics for a property
+   * @param {string} propertyId - Property ID
+   * @returns {Promise<Object>} Detailed rating statistics
+   */
+  async getDetailedRatingStats(propertyId) {
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    return await this.propertyViewsRepository.getRatingStats(propertyId);
   }
 }
 

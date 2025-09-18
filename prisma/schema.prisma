@@ -62,6 +62,8 @@ model User {
   approvals        ListingApproval[] @relation("ReviewerApprovals")
   payments         Payment[]
   properties       Property[]        @relation("OwnerProperties")
+  propertyViews    PropertyView[]    @relation("PropertyViews")
+  propertyRatings  PropertyRating[]  @relation("PropertyRatings")
 
   @@map("users")
 }
@@ -112,6 +114,8 @@ model Property {
   leases         Lease[]
   approvals      ListingApproval[]
   predictions    PricePrediction[]
+  views          PropertyView[]
+  ratings        PropertyRating[]
   owner          User                     @relation("OwnerProperties", fields: [ownerId], references: [id], onDelete: Cascade)
   propertyType   PropertyType             @relation(fields: [propertyTypeId], references: [id])
   amenities      PropertyAmenity[]
@@ -285,6 +289,40 @@ model PricePrediction {
 
   @@index([propertyId, modelVersion])
   @@map("price_predictions")
+}
+
+/// Log views/kunjungan ke detail property untuk analytics dan tracking popularitas.
+model PropertyView {
+  id         String    @id @default(uuid())
+  propertyId String
+  userId     String?
+  ipAddress  String?
+  userAgent  String?
+  viewedAt   DateTime  @default(now())
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User?     @relation("PropertyViews", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, viewedAt])
+  @@index([userId])
+  @@map("property_views")
+}
+
+/// Rating dan review property oleh user yang sudah login.
+model PropertyRating {
+  id         String    @id @default(uuid())
+  propertyId String
+  userId     String
+  rating     Int       // 1-5 stars
+  comment    String?   // Optional review text
+  ratedAt    DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User      @relation("PropertyRatings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, userId]) // One rating per user per property
+  @@index([propertyId])
+  @@index([userId])
+  @@map("property_ratings")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
