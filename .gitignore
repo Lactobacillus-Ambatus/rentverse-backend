@@ -16,6 +16,7 @@ coverage/
 .cache
 temp/
 tmp/
+output/
 
 # Database
 prisma/migrations/
@@ -26,6 +27,7 @@ prisma/migrations/
 .idea/
 *.swp
 *.swo
+test-generate-pdf.js
 
 # OS
 Thumbs.db
