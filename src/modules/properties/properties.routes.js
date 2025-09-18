@@ -2,6 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const { auth, authorize } = require('../../middleware/auth');
 const propertiesController = require('./properties.controller');
+const propertyViewsController = require('../propertyViews/propertyViews.controller');
 
 const router = express.Router();
 
@@ -86,6 +87,19 @@ const router = express.Router();
  *           items:
  *             type: string
  *           description: Array of image URLs
+ *         viewCount:
+ *           type: integer
+ *           description: Total number of times this property has been viewed
+ *           example: 42
+ *         averageRating:
+ *           type: number
+ *           format: float
+ *           description: Average rating from user reviews (0-5)
+ *           example: 4.2
+ *         totalRatings:
+ *           type: integer
+ *           description: Total number of ratings/reviews for this property
+ *           example: 15
  *         propertyType:
  *           $ref: '#/components/schemas/PropertyType'
  *         amenities:
@@ -803,5 +817,445 @@ router.delete(
   authorize('USER', 'ADMIN'),
   propertiesController.deleteProperty
 );
+
+/**
+ * @swagger
+ * /api/properties/{id}/view:
+ *   post:
+ *     summary: Log property view for analytics
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to log view for
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     requestBody:
+ *       required: false
+ *       description: View logging is automatic based on request headers
+ *     responses:
+ *       200:
+ *         description: View logged successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "View logged successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     property:
+ *                       $ref: '#/components/schemas/Property'
+ *                     viewLogged:
+ *                       type: boolean
+ *                       description: Whether a new view was logged (false if recent duplicate)
+ *                       example: true
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/:id/view', propertyViewsController.logView);
+
+/**
+ * @swagger
+ * /api/properties/{id}/view-stats:
+ *   get:
+ *     summary: Get property view statistics (Owner/Admin only)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to get view stats for
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *         description: Number of days to look back for recent views
+ *     responses:
+ *       200:
+ *         description: Property view statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     stats:
+ *                       type: object
+ *                       properties:
+ *                         totalViews:
+ *                           type: integer
+ *                           description: Total views all time
+ *                           example: 156
+ *                         recentViews:
+ *                           type: object
+ *                           properties:
+ *                             count:
+ *                               type: integer
+ *                               description: Views in the specified period
+ *                               example: 23
+ *                             period:
+ *                               type: string
+ *                               description: The period for recent views
+ *                               example: "30 days"
+ *                         uniqueViewers:
+ *                           type: integer
+ *                           description: Number of unique registered users who viewed
+ *                           example: 18
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  '/:id/view-stats',
+  auth,
+  authorize('USER', 'ADMIN'),
+  propertyViewsController.getViewStats
+);
+
+/**
+ * @swagger
+ * /api/properties/{id}/rating:
+ *   post:
+ *     summary: Create or update property rating (Authenticated users only)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to rate
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rating
+ *             properties:
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 description: Rating from 1 to 5 stars
+ *                 example: 4
+ *               comment:
+ *                 type: string
+ *                 description: Optional review comment
+ *                 example: "Great property with excellent amenities!"
+ *     responses:
+ *       200:
+ *         description: Rating submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Rating submitted successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     rating:
+ *                       type: object
+ *                       description: The created/updated rating
+ *       400:
+ *         description: Bad request (invalid rating value)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post(
+  '/:id/rating',
+  auth,
+  [
+    body('rating')
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Rating must be between 1 and 5'),
+    body('comment')
+      .optional()
+      .trim()
+      .isLength({ max: 1000 })
+      .withMessage('Comment must not exceed 1000 characters'),
+  ],
+  propertyViewsController.createOrUpdateRating
+);
+
+/**
+ * @swagger
+ * /api/properties/{id}/rating:
+ *   delete:
+ *     summary: Delete user's rating for property (Authenticated users only)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to delete rating from
+ *     responses:
+ *       200:
+ *         description: Rating deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Rating deleted successfully"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Property or rating not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/:id/rating', auth, propertyViewsController.deleteRating);
+
+/**
+ * @swagger
+ * /api/properties/{id}/ratings:
+ *   get:
+ *     summary: Get property ratings with pagination
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to get ratings for
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of ratings per page
+ *     responses:
+ *       200:
+ *         description: Property ratings with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     ratings:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           rating:
+ *                             type: integer
+ *                             minimum: 1
+ *                             maximum: 5
+ *                           comment:
+ *                             type: string
+ *                             nullable: true
+ *                           ratedAt:
+ *                             type: string
+ *                             format: date-time
+ *                           user:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               firstName:
+ *                                 type: string
+ *                               lastName:
+ *                                 type: string
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/ratings', propertyViewsController.getPropertyRatings);
+
+/**
+ * @swagger
+ * /api/properties/{id}/my-rating:
+ *   get:
+ *     summary: Get current user's rating for property (Authenticated users only)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to get user's rating for
+ *     responses:
+ *       200:
+ *         description: User's rating for the property
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     rating:
+ *                       type: object
+ *                       nullable: true
+ *                       description: User's rating or null if not rated yet
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         rating:
+ *                           type: integer
+ *                           minimum: 1
+ *                           maximum: 5
+ *                         comment:
+ *                           type: string
+ *                           nullable: true
+ *                         ratedAt:
+ *                           type: string
+ *                           format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/my-rating', auth, propertyViewsController.getUserRating);
+
+/**
+ * @swagger
+ * /api/properties/{id}/rating-stats:
+ *   get:
+ *     summary: Get detailed rating statistics for property
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to get rating stats for
+ *     responses:
+ *       200:
+ *         description: Detailed rating statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     stats:
+ *                       type: object
+ *                       properties:
+ *                         averageRating:
+ *                           type: number
+ *                           format: float
+ *                           description: Average rating (0-5)
+ *                           example: 4.2
+ *                         totalRatings:
+ *                           type: integer
+ *                           description: Total number of ratings
+ *                           example: 15
+ *                         ratingDistribution:
+ *                           type: object
+ *                           description: Count of ratings for each star level
+ *                           properties:
+ *                             "1":
+ *                               type: integer
+ *                               example: 1
+ *                             "2":
+ *                               type: integer
+ *                               example: 0
+ *                             "3":
+ *                               type: integer
+ *                               example: 2
+ *                             "4":
+ *                               type: integer
+ *                               example: 5
+ *                             "5":
+ *                               type: integer
+ *                               example: 7
+ *       404:
+ *         description: Property not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/rating-stats', propertyViewsController.getRatingStats);
 
 module.exports = router;

@@ -31,7 +31,8 @@ router.use(passport.initialize());
  *       required:
  *         - email
  *         - password
- *         - name
+ *         - firstName
+ *         - lastName
  *       properties:
  *         email:
  *           type: string
@@ -39,10 +40,19 @@ router.use(passport.initialize());
  *         password:
  *           type: string
  *           minLength: 6
- *         name:
+ *         firstName:
  *           type: string
+ *           description: User's first name
+ *         lastName:
+ *           type: string
+ *           description: User's last name
+ *         dateOfBirth:
+ *           type: string
+ *           format: date
+ *           description: User's date of birth (YYYY-MM-DD)
  *         phone:
  *           type: string
+ *           description: User's phone number
  *     AuthResponse:
  *       type: object
  *       properties:
@@ -60,7 +70,16 @@ router.use(passport.initialize());
  *                   type: string
  *                 email:
  *                   type: string
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
  *                 name:
+ *                   type: string
+ *                 dateOfBirth:
+ *                   type: string
+ *                   format: date
+ *                 phone:
  *                   type: string
  *                 role:
  *                   type: string
@@ -104,7 +123,13 @@ router.post(
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
-    body('name').notEmpty().trim(),
+    body('firstName').notEmpty().trim().withMessage('First name is required'),
+    body('lastName').notEmpty().trim().withMessage('Last name is required'),
+    body('dateOfBirth')
+      .optional()
+      .isISO8601()
+      .withMessage('Date of birth must be a valid date'),
+    body('phone').optional().trim(),
   ],
   async (req, res) => {
     try {
@@ -117,7 +142,8 @@ router.post(
         });
       }
 
-      const { email, password, name, phone } = req.body;
+      const { email, password, firstName, lastName, dateOfBirth, phone } =
+        req.body;
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -134,19 +160,28 @@ router.post(
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 12);
 
+      // Create full name for backward compatibility
+      const fullName = `${firstName} ${lastName}`;
+
       // Create user with USER role
       const user = await prisma.user.create({
         data: {
           email,
           password: hashedPassword,
-          name,
+          firstName,
+          lastName,
+          name: fullName,
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
           phone: phone || null,
           role: 'USER',
         },
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
           name: true,
+          dateOfBirth: true,
           phone: true,
           role: true,
           isActive: true,
@@ -301,7 +336,10 @@ router.get('/me', async (req, res) => {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         name: true,
+        dateOfBirth: true,
         phone: true,
         role: true,
         isActive: true,

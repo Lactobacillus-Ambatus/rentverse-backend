@@ -4,59 +4,80 @@ const bcrypt = require('bcryptjs');
 const users = [
   {
     email: 'admin@rentverse.com',
+    firstName: 'Admin',
+    lastName: 'User',
     name: 'Admin User',
     phone: '+60123456789',
     role: 'ADMIN',
     isActive: true,
-    verifiedAt: new Date()
+    verifiedAt: new Date(),
+    dateOfBirth: new Date('1990-01-01')
   },
   {
     email: 'landlord@rentverse.com', 
+    firstName: 'John',
+    lastName: 'Landlord',
     name: 'John Landlord',
     phone: '+60123456788',
     role: 'USER',
     isActive: true,
-    verifiedAt: new Date()
+    verifiedAt: new Date(),
+    dateOfBirth: new Date('1985-05-15')
   },
   {
     email: 'tenant@rentverse.com',
+    firstName: 'Jane',
+    lastName: 'Tenant',
     name: 'Jane Tenant', 
     phone: '+60123456787',
     role: 'USER',
     isActive: true,
-    verifiedAt: new Date()
+    verifiedAt: new Date(),
+    dateOfBirth: new Date('1992-08-20')
   },
   {
     email: 'landlord2@rentverse.com',
+    firstName: 'Ahmad',
+    lastName: 'Rahman',
     name: 'Ahmad Rahman',
     phone: '+60987654321',
     role: 'USER',
     isActive: true,
-    verifiedAt: new Date()
+    verifiedAt: new Date(),
+    dateOfBirth: new Date('1980-12-10')
   },
   {
     email: 'tenant2@rentverse.com',
+    firstName: 'Siti',
+    lastName: 'Aminah',
     name: 'Siti Aminah',
     phone: '+60987654322',
     role: 'USER', 
     isActive: true,
-    verifiedAt: new Date()
+    verifiedAt: new Date(),
+    dateOfBirth: new Date('1995-03-25')
   },
   {
     email: 'landlord3@rentverse.com',
+    firstName: 'Lim',
+    lastName: 'Wei Ming',
     name: 'Lim Wei Ming',
     phone: '+60987654323',
     role: 'USER',
     isActive: true,
-    verifiedAt: new Date()
+    verifiedAt: new Date(),
+    dateOfBirth: new Date('1988-07-08')
   },
   {
     email: 'superadmin@rentverse.com',
+    firstName: 'Super',
+    lastName: 'Admin',
     name: 'Super Admin',
     phone: '+60123456780',
     role: 'ADMIN',
     isActive: true,
-    verifiedAt: new Date()
+    verifiedAt: new Date(),
+    dateOfBirth: new Date('1975-11-30')
   }
 
 ];
