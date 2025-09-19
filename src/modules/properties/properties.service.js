@@ -124,9 +124,20 @@ class PropertiesService {
     }));
   }
 
-  async getAllProperties(page = 1, limit = 10, filters = {}, userId = null) {
+  async getAllProperties(
+    page = 1,
+    limit = 10,
+    filters = {},
+    userId = null,
+    userRole = 'USER'
+  ) {
     const skip = (page - 1) * limit;
     const where = {};
+
+    // For non-admin users, only show APPROVED properties
+    if (userRole !== 'ADMIN') {
+      where.status = 'APPROVED';
+    }
 
     // Apply filters
     if (filters.propertyTypeId) where.propertyTypeId = filters.propertyTypeId;
@@ -135,7 +146,8 @@ class PropertiesService {
     if (filters.available !== undefined)
       where.isAvailable = filters.available === 'true';
     if (filters.bedrooms) where.bedrooms = parseInt(filters.bedrooms);
-    if (filters.status) where.status = filters.status;
+    // Only allow admin to filter by status
+    if (filters.status && userRole === 'ADMIN') where.status = filters.status;
     if (filters.furnished !== undefined)
       where.furnished = filters.furnished === 'true';
 
@@ -285,32 +297,63 @@ class PropertiesService {
         propertyData.isAvailable !== undefined
           ? propertyData.isAvailable
           : true,
-      status: propertyData.status || 'DRAFT',
+      status: propertyData.status || 'PENDING_REVIEW', // Default to PENDING_REVIEW for approval workflow
       images: propertyData.images || [],
       propertyTypeId: propertyData.propertyTypeId,
       ownerId,
     };
 
-    // Create property first
-    const property = await propertiesRepository.create(cleanPropertyData);
-
-    // Handle amenities if provided
-    if (propertyData.amenityIds && propertyData.amenityIds.length > 0) {
-      const amenityConnections = propertyData.amenityIds.map(amenityId => ({
-        propertyId: property.id,
-        amenityId: amenityId,
-      }));
-
-      await prisma.propertyAmenity.createMany({
-        data: amenityConnections,
+    // Create property and approval record in transaction
+    const result = await prisma.$transaction(async tx => {
+      // Create property first
+      const property = await tx.property.create({
+        data: cleanPropertyData,
+        include: {
+          owner: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              name: true,
+            },
+          },
+          propertyType: true,
+          amenities: {
+            include: {
+              amenity: true,
+            },
+          },
+        },
       });
-    }
 
-    // Return property with includes
-    const createdProperty = await propertiesRepository.findById(property.id);
+      // Handle amenities if provided
+      if (propertyData.amenityIds && propertyData.amenityIds.length > 0) {
+        const amenityConnections = propertyData.amenityIds.map(amenityId => ({
+          propertyId: property.id,
+          amenityId: amenityId,
+        }));
+
+        await tx.propertyAmenity.createMany({
+          data: amenityConnections,
+        });
+      }
+
+      // Auto create approval record if status is PENDING_REVIEW
+      if (property.status === 'PENDING_REVIEW') {
+        await tx.listingApproval.create({
+          data: {
+            propertyId: property.id,
+            status: 'PENDING',
+          },
+        });
+      }
+
+      return property;
+    });
 
     // Add Google Maps URL to the created property
-    return this.addMapsUrlToProperty(createdProperty);
+    return this.addMapsUrlToProperty(result);
   }
 
   async updateProperty(id, updateData, requestingUser) {
@@ -854,6 +897,171 @@ class PropertiesService {
       propertyId,
       favoriteCount,
       recentFavorites,
+    };
+  }
+
+  // Get pending approvals (admin only)
+  async getPendingApprovals(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [approvals, total] = await Promise.all([
+      prisma.listingApproval.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          property: {
+            include: {
+              owner: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                  name: true,
+                },
+              },
+              propertyType: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.listingApproval.count({
+        where: { status: 'PENDING' },
+      }),
+    ]);
+
+    const pages = Math.ceil(total / limit);
+
+    return {
+      approvals,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages,
+      },
+    };
+  }
+
+  // Approve property (admin only)
+  async approveProperty(propertyId, reviewerId, notes = '') {
+    // Check if property exists
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    // Check if property is in PENDING_REVIEW status
+    if (property.status !== 'PENDING_REVIEW') {
+      throw new Error('Only PENDING_REVIEW properties can be approved');
+    }
+
+    // Find approval record (unique per property)
+    const approval = await prisma.listingApproval.findUnique({
+      where: { propertyId },
+    });
+
+    if (!approval) {
+      throw new Error('Approval record not found');
+    }
+
+    // Update property status to APPROVED
+    const [updatedProperty, updatedApproval] = await prisma.$transaction([
+      prisma.property.update({
+        where: { id: propertyId },
+        data: { status: 'APPROVED' },
+      }),
+      prisma.listingApproval.update({
+        where: { propertyId },
+        data: {
+          status: 'APPROVED',
+          reviewerId,
+          notes,
+          reviewedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return {
+      property: updatedProperty,
+      approval: updatedApproval,
+    };
+  }
+
+  // Reject property (admin only)
+  async rejectProperty(propertyId, reviewerId, notes) {
+    // Check if property exists
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    // Check if property is in PENDING_REVIEW status
+    if (property.status !== 'PENDING_REVIEW') {
+      throw new Error('Only PENDING_REVIEW properties can be rejected');
+    }
+
+    // Find approval record (unique per property)
+    const approval = await prisma.listingApproval.findUnique({
+      where: { propertyId },
+    });
+
+    if (!approval) {
+      throw new Error('Approval record not found');
+    }
+
+    // Update property status to REJECTED
+    const [updatedProperty, updatedApproval] = await prisma.$transaction([
+      prisma.property.update({
+        where: { id: propertyId },
+        data: { status: 'REJECTED' },
+      }),
+      prisma.listingApproval.update({
+        where: { propertyId },
+        data: {
+          status: 'REJECTED',
+          reviewerId,
+          notes,
+          reviewedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return {
+      property: updatedProperty,
+      approval: updatedApproval,
+    };
+  }
+
+  // Get approval history for a property
+  async getApprovalHistory(propertyId) {
+    // Check if property exists
+    const property = await propertiesRepository.findById(propertyId);
+    if (!property) {
+      throw new Error('Property not found');
+    }
+
+    const approvals = await prisma.listingApproval.findMany({
+      where: { propertyId },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      propertyId,
+      approvals,
     };
   }
 }

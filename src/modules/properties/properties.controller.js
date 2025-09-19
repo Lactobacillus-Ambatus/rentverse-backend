@@ -7,6 +7,7 @@ class PropertiesController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const userId = req.user?.id; // Get user ID if authenticated
+      const userRole = req.user?.role || 'USER'; // Get user role
 
       const filters = {
         propertyTypeId: req.query.propertyTypeId,
@@ -23,7 +24,8 @@ class PropertiesController {
         page,
         limit,
         filters,
-        userId
+        userId,
+        userRole
       );
 
       res.json({
@@ -303,6 +305,149 @@ class PropertiesController {
       });
     } catch (error) {
       console.error('Get featured properties error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  // Get pending approvals (admin only)
+  async getPendingApprovals(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const result = await propertiesService.getPendingApprovals(page, limit);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get pending approvals error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  // Approve property (admin only)
+  async approveProperty(req, res) {
+    try {
+      const propertyId = req.params.id;
+      const { notes } = req.body;
+
+      const result = await propertiesService.approveProperty(
+        propertyId,
+        req.user.id,
+        notes
+      );
+
+      res.json({
+        success: true,
+        message: 'Property approved successfully',
+        data: result,
+      });
+    } catch (error) {
+      console.error('Approve property error:', error);
+
+      if (
+        error.message === 'Property not found' ||
+        error.message === 'Approval record not found'
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('Only PENDING_REVIEW properties')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  // Reject property (admin only)
+  async rejectProperty(req, res) {
+    try {
+      const propertyId = req.params.id;
+      const { notes } = req.body;
+
+      if (!notes || notes.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rejection notes are required',
+        });
+      }
+
+      const result = await propertiesService.rejectProperty(
+        propertyId,
+        req.user.id,
+        notes
+      );
+
+      res.json({
+        success: true,
+        message: 'Property rejected successfully',
+        data: result,
+      });
+    } catch (error) {
+      console.error('Reject property error:', error);
+
+      if (
+        error.message === 'Property not found' ||
+        error.message === 'Approval record not found'
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('Only PENDING_REVIEW properties')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  // Get approval history
+  async getApprovalHistory(req, res) {
+    try {
+      const propertyId = req.params.id;
+      const result = await propertiesService.getApprovalHistory(propertyId);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get approval history error:', error);
+
+      if (error.message === 'Property not found') {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
       res.status(500).json({
         success: false,
         message: 'Internal server error',

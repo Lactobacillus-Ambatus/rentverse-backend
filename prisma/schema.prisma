@@ -57,7 +57,6 @@ model User {
   githubId         String?           @unique
   twitterId        String?           @unique
   
-  signatures       ESignature[]
   leasesAsLandlord Lease[]           @relation("LandlordLeases")
   leasesAsTenant   Lease[]           @relation("TenantLeases")
   approvals        ListingApproval[] @relation("ReviewerApprovals")
@@ -105,7 +104,7 @@ model Property {
   
   // Metadata sistem
   code           String                   @unique
-  status         ListingStatus            @default(DRAFT)
+  status         ListingStatus            @default(PENDING_REVIEW)
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
   
@@ -140,19 +139,19 @@ model PropertyAmenity {
   @@map("property_amenities")
 }
 
-/// Riwayat dan keputusan review listing oleh admin.
+/// Log review listing oleh admin (simple audit trail).
 model ListingApproval {
   id         String         @id @default(uuid())
-  propertyId String
-  reviewerId String?
+  propertyId String         @unique // One approval per property (latest status)
+  reviewerId String?        // Admin yang review
   status     ApprovalStatus @default(PENDING)
-  notes      String?
-  decidedAt  DateTime?
+  notes      String?        // Optional rejection reason
+  reviewedAt DateTime?      // Kapan di-review
   createdAt  DateTime       @default(now())
   property   Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   reviewer   User?          @relation("ReviewerApprovals", fields: [reviewerId], references: [id])
 
-  @@index([propertyId, status])
+  @@index([status])
   @@map("listing_approvals")
 }
 
@@ -164,8 +163,8 @@ model Lease {
   rentAmount      Decimal          @db.Decimal(12, 2)
   currencyCode    String           @default("IDR")
   securityDeposit Decimal?         @db.Decimal(12, 2)
-  status          LeaseStatus      @default(DRAFT)
-  notes           String?
+  status          LeaseStatus      @default(PENDING)
+  notes           String?          // Catatan dari user saat booking
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   propertyId      String
@@ -222,61 +221,16 @@ model Payment {
 
 /// Perjanjian sewa (hasil generate PDF) untuk satu lease.
 model RentalAgreement {
-  id              String            @id @default(uuid())
-  leaseId         String            @unique
-  templateVersion String
-  pdfUrl          String?
-  fileHash        String?
-  generatedAt     DateTime          @default(now())
-  clauses         AgreementClause[]
-  signatures      ESignature[]
-  lease           Lease             @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  leaseId     String   @unique
+  pdfUrl      String?  // Cloudinary URL
+  publicId    String?  // Cloudinary public ID untuk delete
+  fileName    String?  // Nama file untuk display
+  fileSize    Int?     // Size dalam bytes
+  generatedAt DateTime @default(now())
+  lease       Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
 
   @@map("rental_agreements")
-}
-
-/// Master klausul kontrak yang dapat diaktif/nonaktifkan per perjanjian.
-model Clause {
-  id         String            @id @default(uuid())
-  key        String            @unique
-  title      String
-  body       String
-  category   String?
-  isDefault  Boolean           @default(false)
-  agreements AgreementClause[]
-
-  @@map("clauses")
-}
-
-/// Pivot pemilihan klausul untuk satu perjanjian sewa.
-model AgreementClause {
-  id          String          @id @default(uuid())
-  agreementId String
-  clauseId    String
-  enabled     Boolean         @default(true)
-  agreement   RentalAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
-  clause      Clause          @relation(fields: [clauseId], references: [id], onDelete: Cascade)
-
-  @@unique([agreementId, clauseId])
-  @@map("agreement_clauses")
-}
-
-/// Pencatatan proses tanda tangan elektronik.
-model ESignature {
-  id          String          @id @default(uuid())
-  agreementId String
-  signerId    String?
-  role        SignerRole
-  provider    ESignProvider   @default(INTERNAL)
-  envelopeId  String?
-  status      ESignStatus     @default(PENDING)
-  signedAt    DateTime?
-  createdAt   DateTime        @default(now())
-  agreement   RentalAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
-  signer      User?           @relation(fields: [signerId], references: [id])
-
-  @@index([agreementId, status])
-  @@map("e_signatures")
 }
 
 /// Log prediksi harga (input mentah, harga prediksi, confidence, versi model).
@@ -361,11 +315,9 @@ enum Role {
 
 /// Status listing untuk alur publikasi/approval.
 enum ListingStatus {
-  DRAFT
   PENDING_REVIEW
   APPROVED
   REJECTED
-  ARCHIVED
 }
 
 /// Status approval per-riwayat keputusan admin.
@@ -375,13 +327,13 @@ enum ApprovalStatus {
   REJECTED
 }
 
-/// Status siklus kontrak sewa.
+/// Status siklus kontrak sewa (simplified).
 enum LeaseStatus {
-  DRAFT
-  ACTIVE
-  TERMINATED
-  CANCELLED
-  COMPLETED
+  PENDING    // User submit booking, tunggu review owner
+  APPROVED   // Owner setujui booking
+  REJECTED   // Owner tolak booking
+  ACTIVE     // Sewa sedang berlangsung (optional)
+  COMPLETED  // Sewa sudah selesai (optional)
 }
 
 /// Jenis invoice/tagihan dalam sewa.
@@ -414,25 +366,4 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
-}
-
-/// Peran penanda tangan dalam perjanjian sewa (peran dalam kontrak, bukan role sistem).
-enum SignerRole {
-  LANDLORD
-  TENANT
-}
-
-/// Penyedia tanda tangan elektronik (internal/eksternal).
-enum ESignProvider {
-  INTERNAL
-  DOCUSIGN
-}
-
-/// Status proses tanda tangan elektronik.
-enum ESignStatus {
-  PENDING
-  VIEWED
-  SIGNED
-  DECLINED
-  EXPIRED
 }

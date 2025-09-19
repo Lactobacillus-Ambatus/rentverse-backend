@@ -80,7 +80,7 @@ const router = express.Router();
  *           description: Whether the property is available for rent
  *         status:
  *           type: string
- *           enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED]
+ *           enum: [PENDING_REVIEW, APPROVED, REJECTED]
  *           description: The listing status
  *         images:
  *           type: array
@@ -693,9 +693,7 @@ router.post(
     body('areaSqm').optional().isFloat({ min: 0 }),
     body('furnished').optional().isBoolean(),
     body('isAvailable').optional().isBoolean(),
-    body('status')
-      .optional()
-      .isIn(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ARCHIVED']),
+    body('status').optional().isIn(['PENDING_REVIEW', 'APPROVED', 'REJECTED']),
     body('images').optional().isArray(),
     body('amenityIds').optional().isArray(),
     body('amenityIds.*').optional().isUUID(),
@@ -848,9 +846,7 @@ router.put(
     body('areaSqm').optional().isFloat({ min: 0 }),
     body('furnished').optional().isBoolean(),
     body('isAvailable').optional().isBoolean(),
-    body('status')
-      .optional()
-      .isIn(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ARCHIVED']),
+    body('status').optional().isIn(['PENDING_REVIEW', 'APPROVED', 'REJECTED']),
     body('images').optional().isArray(),
     body('amenityIds').optional().isArray(),
     body('amenityIds.*').optional().isUUID(),
@@ -1487,10 +1483,178 @@ router.get(
  *                             type: string
  *                             format: date-time
  *       404:
+/**
+ * @swagger
+ * /api/properties/{id}/favorite-stats:
+ *   get:
+ *     summary: Get favorite statistics for a property
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property
+ *     responses:
+ *       200:
+ *         description: Favorite statistics retrieved successfully
+ *       404:
  *         description: Property not found
  *       500:
  *         description: Internal server error
  */
 router.get('/:id/favorite-stats', propertyViewsController.getFavoriteStats);
+
+// ========== ADMIN APPROVAL ENDPOINTS ==========
+
+/**
+ * @swagger
+ * /api/properties/pending-approval:
+ *   get:
+ *     summary: Get properties pending approval (Admin only)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Pending properties retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+router.get(
+  '/pending-approval',
+  auth,
+  authorize('ADMIN'),
+  propertiesController.getPendingApprovals
+);
+
+/**
+ * @swagger
+ * /api/properties/{id}/approve:
+ *   post:
+ *     summary: Approve a property (Admin only)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to approve
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notes:
+ *                 type: string
+ *                 description: Optional approval notes
+ *     responses:
+ *       200:
+ *         description: Property approved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: Property not found
+ */
+router.post(
+  '/:id/approve',
+  auth,
+  authorize('ADMIN'),
+  propertiesController.approveProperty
+);
+
+/**
+ * @swagger
+ * /api/properties/{id}/reject:
+ *   post:
+ *     summary: Reject a property (Admin only)
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property to reject
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notes:
+ *                 type: string
+ *                 required: true
+ *                 description: Rejection reason/notes (required)
+ *     responses:
+ *       200:
+ *         description: Property rejected successfully
+ *       400:
+ *         description: Bad request - Notes are required
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: Property not found
+ */
+router.post(
+  '/:id/reject',
+  auth,
+  authorize('ADMIN'),
+  propertiesController.rejectProperty
+);
+
+/**
+ * @swagger
+ * /api/properties/{id}/approval-history:
+ *   get:
+ *     summary: Get approval history for a property
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: UUID of the property
+ *     responses:
+ *       200:
+ *         description: Approval history retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Property not found
+ */
+router.get(
+  '/:id/approval-history',
+  auth,
+  propertiesController.getApprovalHistory
+);
 
 module.exports = router;
