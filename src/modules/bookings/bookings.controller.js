@@ -302,10 +302,10 @@ class BookingsController {
    */
   async getRentalAgreementPDF(req, res) {
     try {
-      const { bookingId } = req.params;
+      const { id } = req.params; // Changed from bookingId to id
 
       const result = await bookingsService.getRentalAgreementPDF(
-        bookingId,
+        id, // Use id instead of bookingId
         req.user.id
       );
 
@@ -333,6 +333,74 @@ class BookingsController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve rental agreement PDF',
+      });
+    }
+  }
+
+  /**
+   * Download rental agreement PDF file directly
+   */
+  async downloadRentalAgreementPDF(req, res) {
+    try {
+      const { id } = req.params;
+
+      const result = await bookingsService.downloadRentalAgreementPDF(
+        id,
+        req.user.id
+      );
+
+      if (result.isLocal) {
+        // For local files, send the file directly
+        const path = require('path');
+        const fs = require('fs');
+
+        const fullPath = path.join(result.filePath);
+
+        if (!fs.existsSync(fullPath)) {
+          return res.status(404).json({
+            success: false,
+            message: 'PDF file not found on server',
+          });
+        }
+
+        // Set appropriate headers for PDF viewing
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader(
+          'Content-Disposition',
+          `inline; filename="${result.fileName}"`
+        );
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+
+        // Stream the file
+        const fileStream = fs.createReadStream(fullPath);
+        fileStream.pipe(res);
+      } else {
+        // For Cloudinary URLs, redirect
+        res.redirect(result.url);
+      }
+    } catch (error) {
+      console.error('Download rental agreement PDF error:', error);
+
+      if (
+        error.message.includes('not found') ||
+        error.message.includes('access denied')
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('only available for approved')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to download rental agreement PDF',
       });
     }
   }
