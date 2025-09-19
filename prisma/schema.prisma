@@ -164,8 +164,8 @@ model Lease {
   rentAmount      Decimal          @db.Decimal(12, 2)
   currencyCode    String           @default("IDR")
   securityDeposit Decimal?         @db.Decimal(12, 2)
-  status          LeaseStatus      @default(DRAFT)
-  notes           String?
+  status          LeaseStatus      @default(PENDING)
+  notes           String?          // Catatan dari user saat booking
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   propertyId      String
@@ -373,13 +373,13 @@ enum ApprovalStatus {
   REJECTED
 }
 
-/// Status siklus kontrak sewa.
+/// Status siklus kontrak sewa (simplified).
 enum LeaseStatus {
-  DRAFT
-  ACTIVE
-  TERMINATED
-  CANCELLED
-  COMPLETED
+  PENDING    // User submit booking, tunggu review owner
+  APPROVED   // Owner setujui booking
+  REJECTED   // Owner tolak booking
+  ACTIVE     // Sewa sedang berlangsung (optional)
+  COMPLETED  // Sewa sudah selesai (optional)
 }
 
 /// Jenis invoice/tagihan dalam sewa.
