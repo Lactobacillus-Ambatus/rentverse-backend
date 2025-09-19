@@ -88,7 +88,7 @@ passport.use(
               name,
               password: randomPassword,
               googleId,
-              role: 'TENANT',
+              role: 'USER',
               isActive: true,
               verifiedAt: new Date(),
             },
