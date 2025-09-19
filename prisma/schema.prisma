@@ -105,7 +105,7 @@ model Property {
   
   // Metadata sistem
   code           String                   @unique
-  status         ListingStatus            @default(DRAFT)
+  status         ListingStatus            @default(PENDING_REVIEW)
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
   
@@ -140,19 +140,19 @@ model PropertyAmenity {
   @@map("property_amenities")
 }
 
-/// Riwayat dan keputusan review listing oleh admin.
+/// Log review listing oleh admin (simple audit trail).
 model ListingApproval {
   id         String         @id @default(uuid())
-  propertyId String
-  reviewerId String?
+  propertyId String         @unique // One approval per property (latest status)
+  reviewerId String?        // Admin yang review
   status     ApprovalStatus @default(PENDING)
-  notes      String?
-  decidedAt  DateTime?
+  notes      String?        // Optional rejection reason
+  reviewedAt DateTime?      // Kapan di-review
   createdAt  DateTime       @default(now())
   property   Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   reviewer   User?          @relation("ReviewerApprovals", fields: [reviewerId], references: [id])
 
-  @@index([propertyId, status])
+  @@index([status])
   @@map("listing_approvals")
 }
 
@@ -361,11 +361,9 @@ enum Role {
 
 /// Status listing untuk alur publikasi/approval.
 enum ListingStatus {
-  DRAFT
   PENDING_REVIEW
   APPROVED
   REJECTED
-  ARCHIVED
 }
 
 /// Status approval per-riwayat keputusan admin.
