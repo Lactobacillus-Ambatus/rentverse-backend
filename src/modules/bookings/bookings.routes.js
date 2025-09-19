@@ -408,4 +408,41 @@ router.get(
   bookingsController.getRentalAgreementPDF
 );
 
+/**
+ * @swagger
+ * /api/bookings/{id}/rental-agreement/download:
+ *   get:
+ *     summary: Download rental agreement PDF file
+ *     description: Securely download the actual PDF file for a booking with proper authentication
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: PDF file download
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: PDF file not found or access denied
+ *       500:
+ *         description: Server error accessing PDF file
+ */
+router.get(
+  '/:id/rental-agreement/download',
+  auth,
+  bookingsController.downloadRentalAgreementPDF
+);
+
 module.exports = router;

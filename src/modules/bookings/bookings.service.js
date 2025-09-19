@@ -639,6 +639,107 @@ class BookingsService {
       throw error;
     }
   }
+
+  /**
+   * Download rental agreement PDF file
+   * @param {string} bookingId
+   * @param {string} userId - For access control
+   * @returns {Promise<Object>}
+   */
+  async downloadRentalAgreementPDF(bookingId, userId) {
+    // First check if user has access to this booking
+    const booking = await this.getBookingById(bookingId, userId);
+
+    if (!booking) {
+      throw new Error('Booking not found or access denied');
+    }
+
+    if (booking.status !== 'APPROVED' && booking.status !== 'ACTIVE') {
+      throw new Error(
+        'Rental agreement is only available for approved bookings'
+      );
+    }
+
+    // Get rental agreement PDF info
+    try {
+      const pdfResult =
+        await pdfGenerationService.getRentalAgreementPDF(bookingId);
+
+      // Determine if this is a local file or Cloudinary URL
+      const isLocal =
+        pdfResult.data.pdfUrl &&
+        pdfResult.data.pdfUrl.startsWith('/api/files/pdfs/');
+
+      if (isLocal) {
+        // Extract local file path
+        const path = require('path');
+        const fileName =
+          pdfResult.data.fileName || `rental-agreement-${bookingId}.pdf`;
+        const filePath = path.join(
+          __dirname,
+          '../../../uploads/pdfs/',
+          fileName
+        );
+
+        return {
+          isLocal: true,
+          filePath,
+          fileName,
+          url: pdfResult.data.pdfUrl,
+        };
+      } else {
+        // Cloudinary URL
+        return {
+          isLocal: false,
+          url: pdfResult.data.pdfUrl,
+          fileName: pdfResult.data.fileName,
+        };
+      }
+    } catch (error) {
+      // If PDF doesn't exist yet, try to generate it
+      if (error.message.includes('not found')) {
+        console.log(
+          '📄 PDF not found, generating rental agreement for download...'
+        );
+        const pdfResult =
+          await pdfGenerationService.generateAndUploadRentalAgreementPDF(
+            bookingId
+          );
+
+        // Check if newly generated PDF is local or Cloudinary
+        const isLocal =
+          pdfResult.data.rentalAgreement.pdfUrl &&
+          pdfResult.data.rentalAgreement.pdfUrl.startsWith('/api/files/pdfs/');
+
+        if (isLocal) {
+          const path = require('path');
+          const fileName =
+            pdfResult.data.rentalAgreement.fileName ||
+            `rental-agreement-${bookingId}.pdf`;
+          const filePath = path.join(
+            __dirname,
+            '../../../uploads/pdfs/',
+            fileName
+          );
+
+          return {
+            isLocal: true,
+            filePath,
+            fileName,
+            url: pdfResult.data.rentalAgreement.pdfUrl,
+          };
+        } else {
+          return {
+            isLocal: false,
+            url: pdfResult.data.cloudinary.url,
+            fileName: pdfResult.data.cloudinary.fileName,
+          };
+        }
+      }
+
+      throw error;
+    }
+  }
 }
 
 module.exports = new BookingsService();

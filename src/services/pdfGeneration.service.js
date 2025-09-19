@@ -4,9 +4,195 @@ const ejs = require('ejs');
 const puppeteer = require('puppeteer');
 const { getSignatureQRCode } = require('./eSignature.service');
 const { prisma } = require('../config/database');
-const { uploadToCloudinary } = require('../config/storage');
+const {
+  cloudinary,
+  isCloudinaryConfigured,
+  CLOUD_FOLDER_PREFIX,
+} = require('../config/storage');
+const { v4: uuidv4 } = require('uuid');
 
 class PDFGenerationService {
+  /**
+   * Upload PDF buffer to Cloudinary using signed upload
+   * @param {Buffer} pdfBuffer
+   * @param {string} fileName
+   * @returns {Promise<Object>}
+   */
+  async uploadPDFToCloudinary(pdfBuffer, fileName) {
+    if (!isCloudinaryConfigured) {
+      throw new Error(
+        'Cloudinary is not configured. Please check your environment variables.'
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      // Generate unique public ID
+      const fileTimestamp = new Date()
+        .toISOString()
+        .replace(/[-T:.Z]/g, '')
+        .slice(0, 14);
+      const shortId = uuidv4().split('-')[0];
+      const publicId = `${CLOUD_FOLDER_PREFIX}/rental-agreements/${fileName}-${fileTimestamp}-${shortId}`;
+
+      // Generate signature for signed upload
+      const signatureTimestamp = Math.round(new Date().getTime() / 1000);
+      const uploadParams = {
+        public_id: publicId,
+        resource_type: 'raw',
+        format: 'pdf',
+        use_filename: false,
+        unique_filename: false,
+        overwrite: true,
+        type: 'upload', // Public upload type
+        access_mode: 'public', // Make publicly accessible
+        timestamp: signatureTimestamp,
+      };
+
+      // Generate signature using Cloudinary's method (fixed order and format)
+      const paramsToSign = {
+        public_id: publicId,
+        resource_type: 'raw',
+        timestamp: signatureTimestamp,
+        format: 'pdf',
+        overwrite: true,
+        use_filename: false,
+        unique_filename: false,
+        type: 'upload',
+        access_mode: 'public',
+      };
+
+      const signature = cloudinary.utils.api_sign_request(
+        paramsToSign,
+        process.env.CLOUD_API_SECRET
+      );
+
+      // Add signature and API key to params
+      const signedParams = {
+        ...uploadParams,
+        signature: signature,
+        api_key: process.env.CLOUD_API_KEY,
+      };
+
+      console.log('🔐 Using signed upload for PDF to Cloudinary...');
+
+      const uploadStream = cloudinary.uploader.upload_stream(
+        signedParams,
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary signed PDF upload error:', error);
+
+            // More detailed error logging for debugging
+            if (error.message && error.message.includes('untrusted')) {
+              console.error(
+                '❌ Account marked as untrusted. Consider upgrading Cloudinary plan or contact support.'
+              );
+            }
+
+            reject(error);
+            return;
+          }
+
+          console.log('✅ PDF uploaded successfully with signed upload');
+
+          resolve({
+            publicId: result.public_id,
+            fileName: `${fileName}.pdf`,
+            size: result.bytes,
+            url: result.secure_url,
+            etag: result.etag,
+            format: result.format,
+            resourceType: result.resource_type,
+          });
+        }
+      );
+
+      // Write buffer to upload stream
+      uploadStream.end(pdfBuffer);
+    });
+  }
+
+  /**
+   * Fallback: Upload PDF as image resource type (workaround for untrusted accounts)
+   * @param {Buffer} pdfBuffer
+   * @param {string} fileName
+   * @returns {Promise<Object>}
+   */
+  async uploadPDFAsImageFallback(pdfBuffer, fileName) {
+    if (!isCloudinaryConfigured) {
+      throw new Error(
+        'Cloudinary is not configured. Please check your environment variables.'
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      // Generate unique public ID
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[-T:.Z]/g, '')
+        .slice(0, 14);
+      const shortId = uuidv4().split('-')[0];
+      const publicId = `${CLOUD_FOLDER_PREFIX}/rental-agreements/${fileName}-${timestamp}-${shortId}`;
+
+      console.log(
+        '⚠️  Using fallback: uploading PDF as image resource type...'
+      );
+
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          resource_type: 'image', // Use 'image' instead of 'raw' as fallback
+          format: 'pdf',
+          use_filename: false,
+          unique_filename: false,
+          overwrite: true,
+          type: 'upload', // Public upload type
+          access_mode: 'public', // Make publicly accessible
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary PDF fallback upload error:', error);
+            reject(error);
+            return;
+          }
+
+          console.log('✅ PDF uploaded successfully using image fallback');
+
+          // Generate proper PDF access URL for fallback uploads
+          let accessUrl = result.secure_url;
+
+          // If uploaded as image resource, create proper PDF delivery URL
+          if (result.resource_type === 'image') {
+            // Use fl_attachment to force download and bypass some restrictions
+            accessUrl = cloudinary.url(result.public_id, {
+              resource_type: 'image',
+              format: 'pdf',
+              flags: 'attachment',
+              secure: true,
+            });
+
+            console.log(
+              '📎 Generated PDF download URL for image resource:',
+              accessUrl
+            );
+          }
+
+          resolve({
+            publicId: result.public_id,
+            fileName: `${fileName}.pdf`,
+            size: result.bytes,
+            url: accessUrl, // Use the processed URL
+            etag: result.etag,
+            format: result.format,
+            resourceType: result.resource_type,
+          });
+        }
+      );
+
+      // Write buffer to upload stream
+      uploadStream.end(pdfBuffer);
+    });
+  }
+
   /**
    * Chrome path detection for macOS/Linux
    */
@@ -35,6 +221,65 @@ class PDFGenerationService {
       '⚠️  No Chrome installation found, using Puppeteer bundled Chromium'
     );
     return null;
+  }
+
+  /**
+   * Generate accessible PDF URL from Cloudinary public_id
+   * @param {string} publicId
+   * @param {string} resourceType
+   * @returns {string}
+   */
+  generateAccessiblePDFUrl(publicId, resourceType = 'raw') {
+    // For both raw and image, try the simplest possible URL
+    const baseUrl = `https://res.cloudinary.com/${process.env.CLOUD_NAME}`;
+
+    if (resourceType === 'raw') {
+      // Direct raw URL without any transformations
+      return `${baseUrl}/raw/upload/${publicId}.pdf`;
+    } else {
+      // Direct image URL without transformations for PDF
+      return `${baseUrl}/image/upload/${publicId}.pdf`;
+    }
+  }
+
+  /**
+   * Save PDF to local storage and return server URL
+   * @param {Buffer} pdfBuffer
+   * @param {string} fileName
+   * @returns {Promise<Object>}
+   */
+  async saveToLocalStorage(pdfBuffer, fileName) {
+    const fs = require('fs');
+    const path = require('path');
+
+    // Create uploads directory if it doesn't exist (using the same path as app.js route)
+    const uploadsDir = path.join(__dirname, '../../uploads/pdfs');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-T:.Z]/g, '')
+      .slice(0, 14);
+    const shortId = uuidv4().split('-')[0];
+    const uniqueFileName = `${fileName}-${timestamp}-${shortId}.pdf`;
+    const filePath = path.join(uploadsDir, uniqueFileName);
+
+    // Save PDF to local file
+    fs.writeFileSync(filePath, pdfBuffer);
+
+    // Generate server URL using the correct route path
+    const serverUrl = `${process.env.BASE_URL || 'http://localhost:3005'}/api/files/pdfs/${uniqueFileName}`;
+
+    return {
+      fileName: uniqueFileName,
+      filePath: filePath,
+      url: serverUrl,
+      size: pdfBuffer.length,
+      publicId: null, // Local files don't have publicId
+    };
   }
 
   /**
@@ -199,36 +444,47 @@ class PDFGenerationService {
         `✅ PDF generated successfully! Size: ${Math.round(pdfBuffer.length / 1024)} KB`
       );
 
-      // 6. Upload PDF ke Cloudinary
-      console.log('☁️  Uploading PDF to Cloudinary...');
-      const fileName = `rental-agreement-${lease.id}-${Date.now()}`;
-      const uploadResult = await uploadToCloudinary(
-        {
-          buffer: pdfBuffer,
-          mimetype: 'application/pdf',
-          originalname: `${fileName}.pdf`,
-          size: pdfBuffer.length,
-        },
-        {
-          folder: 'rental-agreements',
-          resource_type: 'raw', // Important for PDF files
-          public_id: fileName,
-          format: 'pdf',
-        }
-      );
+      // 6. Save PDF locally with Cloudinary as backup
+      console.log('💾 Saving PDF locally...');
+      const fileName = `rental-agreement-${lease.id}`;
 
-      console.log('✅ PDF uploaded to Cloudinary successfully!');
-      console.log('📍 Cloudinary URL:', uploadResult.secure_url);
+      let uploadResult;
+      try {
+        // Primary: Save to local storage
+        uploadResult = await this.saveToLocalStorage(pdfBuffer, fileName);
+        console.log('✅ PDF saved to local storage successfully!');
+      } catch (localStorageError) {
+        console.warn(
+          '⚠️  Local storage failed, trying Cloudinary backup...',
+          localStorageError.message
+        );
+
+        try {
+          // Backup: Upload to Cloudinary with signed method
+          uploadResult = await this.uploadPDFToCloudinary(pdfBuffer, fileName);
+          console.log('✅ PDF uploaded to Cloudinary successfully as backup!');
+        } catch (cloudinaryError) {
+          console.error('❌ Both local storage and Cloudinary failed:', {
+            localError: localStorageError.message,
+            cloudinaryError: cloudinaryError.message,
+          });
+          throw new Error(
+            `Failed to save PDF: Local storage failed (${localStorageError.message}), Cloudinary backup also failed (${cloudinaryError.message})`
+          );
+        }
+      }
+
+      console.log('📍 PDF URL:', uploadResult.url);
 
       // 7. Simpan record RentalAgreement ke database
       console.log('💾 Saving rental agreement record to database...');
       const rentalAgreement = await prisma.rentalAgreement.create({
         data: {
           leaseId: lease.id,
-          pdfUrl: uploadResult.secure_url,
-          publicId: uploadResult.public_id,
-          fileName: `${fileName}.pdf`,
-          fileSize: pdfBuffer.length,
+          pdfUrl: uploadResult.url,
+          publicId: uploadResult.publicId,
+          fileName: uploadResult.fileName,
+          fileSize: uploadResult.size,
         },
       });
 
@@ -240,10 +496,10 @@ class PDFGenerationService {
         data: {
           rentalAgreement,
           cloudinary: {
-            url: uploadResult.secure_url,
-            publicId: uploadResult.public_id,
-            fileName: `${fileName}.pdf`,
-            size: pdfBuffer.length,
+            url: uploadResult.url,
+            publicId: uploadResult.publicId,
+            fileName: uploadResult.fileName,
+            size: uploadResult.size,
             etag: uploadResult.etag,
           },
         },
@@ -286,9 +542,29 @@ class PDFGenerationService {
         throw new Error('Rental agreement not found for this lease');
       }
 
+      // Generate accessible URL based on how the file was stored
+      let accessibleUrl = rentalAgreement.pdfUrl;
+
+      // If we have publicId, generate a more accessible URL
+      if (rentalAgreement.publicId) {
+        // Determine resource type from the URL or publicId
+        const resourceType = rentalAgreement.pdfUrl.includes('/image/upload/')
+          ? 'image'
+          : 'raw';
+        accessibleUrl = this.generateAccessiblePDFUrl(
+          rentalAgreement.publicId,
+          resourceType
+        );
+
+        console.log('📎 Generated accessible PDF URL:', accessibleUrl);
+      }
+
       return {
         success: true,
-        data: rentalAgreement,
+        data: {
+          ...rentalAgreement,
+          pdfUrl: accessibleUrl, // Use the accessible URL
+        },
       };
     } catch (error) {
       throw new Error(`Failed to get rental agreement: ${error.message}`);
