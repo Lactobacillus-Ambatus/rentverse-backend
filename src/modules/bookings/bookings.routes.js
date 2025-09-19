@@ -338,4 +338,74 @@ router.post('/:id/approve', auth, bookingsController.approveBooking);
  */
 router.post('/:id/reject', auth, bookingsController.rejectBooking);
 
+/**
+ * @swagger
+ * /api/bookings/{id}/rental-agreement:
+ *   get:
+ *     summary: Get rental agreement PDF for a booking
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Rental agreement PDF retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     bookingId:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [APPROVED, ACTIVE]
+ *                     property:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         title:
+ *                           type: string
+ *                         address:
+ *                           type: string
+ *                     pdf:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ *                           description: Cloudinary URL to PDF file
+ *                         fileName:
+ *                           type: string
+ *                         fileSize:
+ *                           type: number
+ *                         generatedAt:
+ *                           type: string
+ *                           format: date-time
+ *       400:
+ *         description: Rental agreement only available for approved bookings
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Booking not found or access denied
+ */
+router.get(
+  '/:id/rental-agreement',
+  auth,
+  bookingsController.getRentalAgreementPDF
+);
+
 module.exports = router;

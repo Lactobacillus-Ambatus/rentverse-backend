@@ -1,4 +1,5 @@
 const { prisma } = require('../../config/database');
+const pdfGenerationService = require('../../services/pdfGeneration.service');
 
 class BookingsService {
   /**
@@ -361,6 +362,39 @@ class BookingsService {
       },
     });
 
+    // Generate PDF rental agreement after approval
+    try {
+      console.log(
+        `📄 Generating rental agreement PDF for approved booking: ${bookingId}`
+      );
+      const pdfResult =
+        await pdfGenerationService.generateAndUploadRentalAgreementPDF(
+          bookingId
+        );
+
+      console.log('✅ Rental agreement PDF generated successfully');
+      console.log('📍 PDF URL:', pdfResult.data.cloudinary.url);
+
+      // Add PDF info to response
+      approvedBooking.rentalAgreementPDF = {
+        url: pdfResult.data.cloudinary.url,
+        fileName: pdfResult.data.cloudinary.fileName,
+        generated: true,
+      };
+    } catch (pdfError) {
+      console.error(
+        '❌ Error generating rental agreement PDF:',
+        pdfError.message
+      );
+      // Don't fail the approval if PDF generation fails
+      // Just log the error and continue
+      approvedBooking.rentalAgreementPDF = {
+        url: null,
+        error: pdfError.message,
+        generated: false,
+      };
+    }
+
     return approvedBooking;
   }
 
@@ -526,6 +560,84 @@ class BookingsService {
     });
 
     return bookedPeriods;
+  }
+
+  /**
+   * Get rental agreement PDF for a booking
+   * @param {string} bookingId
+   * @param {string} userId - For access control
+   * @returns {Promise<Object>}
+   */
+  async getRentalAgreementPDF(bookingId, userId) {
+    // First check if user has access to this booking
+    const booking = await this.getBookingById(bookingId, userId);
+
+    if (!booking) {
+      throw new Error('Booking not found or access denied');
+    }
+
+    if (booking.status !== 'APPROVED' && booking.status !== 'ACTIVE') {
+      throw new Error(
+        'Rental agreement is only available for approved bookings'
+      );
+    }
+
+    // Get rental agreement PDF
+    try {
+      const pdfResult =
+        await pdfGenerationService.getRentalAgreementPDF(bookingId);
+
+      return {
+        success: true,
+        message: 'Rental agreement PDF retrieved successfully',
+        data: {
+          bookingId: bookingId,
+          status: booking.status,
+          property: {
+            id: booking.property.id,
+            title: booking.property.title,
+            address: booking.property.address,
+          },
+          pdf: {
+            url: pdfResult.data.pdfUrl,
+            fileName: pdfResult.data.fileName,
+            fileSize: pdfResult.data.fileSize,
+            generatedAt: pdfResult.data.generatedAt,
+          },
+        },
+      };
+    } catch (error) {
+      // If PDF doesn't exist yet, try to generate it
+      if (error.message.includes('not found')) {
+        console.log('📄 PDF not found, generating rental agreement...');
+        const pdfResult =
+          await pdfGenerationService.generateAndUploadRentalAgreementPDF(
+            bookingId
+          );
+
+        return {
+          success: true,
+          message: 'Rental agreement PDF generated and retrieved successfully',
+          data: {
+            bookingId: bookingId,
+            status: booking.status,
+            property: {
+              id: booking.property.id,
+              title: booking.property.title,
+              address: booking.property.address,
+            },
+            pdf: {
+              url: pdfResult.data.cloudinary.url,
+              fileName: pdfResult.data.cloudinary.fileName,
+              fileSize: pdfResult.data.cloudinary.size,
+              generatedAt: new Date(),
+            },
+          },
+        };
+      }
+
+      throw error;
+    }
   }
 }
 

@@ -296,6 +296,46 @@ class BookingsController {
       });
     }
   }
+
+  /**
+   * Get rental agreement PDF for a booking
+   */
+  async getRentalAgreementPDF(req, res) {
+    try {
+      const { bookingId } = req.params;
+
+      const result = await bookingsService.getRentalAgreementPDF(
+        bookingId,
+        req.user.id
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error('Get rental agreement PDF error:', error);
+
+      if (
+        error.message.includes('not found') ||
+        error.message.includes('access denied')
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('only available for approved')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve rental agreement PDF',
+      });
+    }
+  }
 }
 
 module.exports = new BookingsController();
