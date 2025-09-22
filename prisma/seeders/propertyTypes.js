@@ -38,15 +38,9 @@ const propertyTypes = [
     isActive: true
   },
   {
-    code: 'DUPLEX',
-    name: 'Duplex',
-    description: 'Two-level residential unit within apartment building',
-    isActive: true
-  },
-  {
-    code: 'LOFT',
-    name: 'Loft',
-    description: 'Industrial-style residential unit with high ceilings',
+    code: 'VILLA',
+    name: 'Villa',
+    description: 'Luxurious single-family home with extensive grounds',
     isActive: true
   }
 ];
