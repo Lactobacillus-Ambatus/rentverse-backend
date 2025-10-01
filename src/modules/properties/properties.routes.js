@@ -126,29 +126,68 @@ const router = express.Router();
  *           format: date-time
  *           description: The date the property was last updated
  *       example:
- *         id: "123e4567-e89b-12d3-a456-426614174000"
- *         code: "APT001"
- *         title: Beautiful Downtown Apartment
- *         description: A stunning 2-bedroom apartment in the heart of the city
- *         address: 123 Main St
- *         city: New York
- *         state: NY
- *         zipCode: "10001"
- *         price: 2500.00
- *         type: APARTMENT
- *         bedrooms: 2
- *         bathrooms: 1
- *         area: 850.5
+ *         id: "96712e5d-fef2-4d26-affc-b2a66efe51f6"
+ *         code: "PROP-ML-010"
+ *         title: "Historic Shophouse in Malacca"
+ *         description: "Beautifully restored 3-story shophouse in UNESCO World Heritage area. Perfect for Airbnb or boutique business."
+ *         address: "Jalan Hang Jebat, Malacca"
+ *         city: "Malacca"
+ *         state: "Malacca"
+ *         country: "MY"
+ *         zipCode: "75200"
+ *         latitude: 2.1951
+ *         longitude: 102.2501
+ *         mapsUrl: "https://www.google.com/maps/@2.1951,102.2501,15z"
+ *         price: 3500.00
+ *         currencyCode: "MYR"
+ *         bedrooms: 3
+ *         bathrooms: 2
+ *         areaSqm: 160.0
+ *         furnished: false
  *         isAvailable: true
- *         viewCount: 42
- *         averageRating: 4.2
- *         totalRatings: 15
- *         isFavorited: true
+ *         status: "APPROVED"
+ *         viewCount: 156
+ *         averageRating: 4.3
+ *         totalRatings: 12
+ *         isFavorited: false
  *         favoriteCount: 8
- *         images: ["https://example.com/image1.jpg"]
- *         amenities: ["WiFi", "Air Conditioning", "Parking"]
- *         createdAt: 2023-01-01T00:00:00.000Z
- *         updatedAt: 2023-01-01T00:00:00.000Z
+ *         images: [
+ *           "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800",
+ *           "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
+ *           "https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?w=800"
+ *         ]
+ *         propertyType:
+ *           id: "cltxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+ *           code: "APARTMENT"
+ *           name: "Apartment"
+ *           description: "Multi-unit residential building"
+ *         amenities: [
+ *           {
+ *             amenity: {
+ *               id: "amenity-ac-001"
+ *               name: "Air Conditioning"
+ *               description: "Central air conditioning system"
+ *               category: "COMFORT"
+ *             }
+ *           },
+ *           {
+ *             amenity: {
+ *               id: "amenity-pool-001"
+ *               name: "Swimming Pool"
+ *               description: "Community swimming pool"
+ *               category: "RECREATION"
+ *             }
+ *           }
+ *         ]
+ *         owner:
+ *           id: "user-123-456-789"
+ *           email: "landlord@example.com"
+ *           name: "John Doe"
+ *           firstName: "John"
+ *           lastName: "Doe"
+ *           phone: "+60123456789"
+ *         createdAt: "2025-09-19T08:30:45.123Z"
+ *         updatedAt: "2025-09-19T10:15:22.456Z"
  */
 
 /**
@@ -253,9 +292,106 @@ const router = express.Router();
  *                           type: integer
  *                           description: Number of properties with valid coordinates
  *                       example:
- *                         latMean: 3.46541
- *                         longMean: 101.44526
- *                         depth: 10
+ *                         latMean: 4.8564
+ *                         longMean: 100.5673
+ *                         depth: 18
+ *             example:
+ *               success: true
+ *               data:
+ *                 properties: [
+ *                   {
+ *                     id: "96712e5d-fef2-4d26-affc-b2a66efe51f6"
+ *                     code: "PROP-ML-010"
+ *                     title: "Historic Shophouse in Malacca"
+ *                     description: "Beautifully restored 3-story shophouse in UNESCO World Heritage area."
+ *                     address: "Jalan Hang Jebat, Malacca"
+ *                     city: "Malacca"
+ *                     state: "Malacca"
+ *                     country: "MY"
+ *                     zipCode: "75200"
+ *                     latitude: 2.1951
+ *                     longitude: 102.2501
+ *                     mapsUrl: "https://www.google.com/maps/@2.1951,102.2501,15z"
+ *                     price: 3500.00
+ *                     currencyCode: "MYR"
+ *                     bedrooms: 3
+ *                     bathrooms: 2
+ *                     areaSqm: 160.0
+ *                     furnished: false
+ *                     isAvailable: true
+ *                     status: "APPROVED"
+ *                     viewCount: 156
+ *                     averageRating: 4.3
+ *                     totalRatings: 12
+ *                     isFavorited: false
+ *                     favoriteCount: 8
+ *                     images: [
+ *                       "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800"
+ *                     ]
+ *                     propertyType:
+ *                       code: "APARTMENT"
+ *                       name: "Apartment"
+ *                     amenities: [
+ *                       { amenity: { name: "Air Conditioning", category: "COMFORT" } }
+ *                     ]
+ *                     owner:
+ *                       name: "John Doe"
+ *                       email: "landlord@example.com"
+ *                     createdAt: "2025-09-19T08:30:45.123Z"
+ *                     updatedAt: "2025-09-19T10:15:22.456Z"
+ *                   },
+ *                   {
+ *                     id: "a7b23c4d-e5f6-7890-abcd-ef1234567890"
+ *                     code: "PROP-PG-011"
+ *                     title: "Seaside Luxury Condo at Tanjung Bungah"
+ *                     description: "Premium beachfront condominium with stunning sea views."
+ *                     address: "Jalan Tanjung Bungah, Tanjung Bungah"
+ *                     city: "Tanjung Bungah"
+ *                     state: "Penang"
+ *                     country: "MY"
+ *                     zipCode: "11200"
+ *                     latitude: 5.4665
+ *                     longitude: 100.2794
+ *                     mapsUrl: "https://www.google.com/maps/@5.4665,100.2794,15z"
+ *                     price: 5800.00
+ *                     currencyCode: "MYR"
+ *                     bedrooms: 3
+ *                     bathrooms: 3
+ *                     areaSqm: 150.0
+ *                     furnished: true
+ *                     isAvailable: true
+ *                     status: "APPROVED"
+ *                     viewCount: 289
+ *                     averageRating: 4.7
+ *                     totalRatings: 23
+ *                     isFavorited: true
+ *                     favoriteCount: 15
+ *                     images: [
+ *                       "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"
+ *                     ]
+ *                     propertyType:
+ *                       code: "CONDOMINIUM"
+ *                       name: "Condominium"
+ *                     amenities: [
+ *                       { amenity: { name: "Swimming Pool", category: "RECREATION" } },
+ *                       { amenity: { name: "24-Hour Security", category: "SECURITY" } }
+ *                     ]
+ *                     owner:
+ *                       name: "John Doe"
+ *                       email: "landlord@example.com"
+ *                     createdAt: "2025-09-20T14:22:10.987Z"
+ *                     updatedAt: "2025-09-20T16:45:33.234Z"
+ *                   }
+ *                 ]
+ *                 pagination:
+ *                   page: 1
+ *                   limit: 10
+ *                   total: 25
+ *                   pages: 3
+ *                 maps:
+ *                   latMean: 4.8564
+ *                   longMean: 100.5673
+ *                   depth: 18
  */
 router.get('/', propertiesController.getAllProperties);
 
@@ -537,11 +673,171 @@ router.get('/geojson', propertiesController.getGeoJSON);
  *                   properties:
  *                     property:
  *                       $ref: '#/components/schemas/Property'
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   property:
+ *                     id: "96712e5d-fef2-4d26-affc-b2a66efe51f6"
+ *                     code: "PROP-ML-010"
+ *                     title: "Historic Shophouse in Malacca"
+ *                     description: "Beautifully restored 3-story shophouse in UNESCO World Heritage area. Perfect for Airbnb or boutique business."
+ *                     address: "Jalan Hang Jebat, Malacca"
+ *                     city: "Malacca"
+ *                     state: "Malacca"
+ *                     country: "MY"
+ *                     zipCode: "75200"
+ *                     latitude: 2.1951
+ *                     longitude: 102.2501
+ *                     mapsUrl: "https://www.google.com/maps/@2.1951,102.2501,15z"
+ *                     price: 3500.00
+ *                     currencyCode: "MYR"
+ *                     bedrooms: 3
+ *                     bathrooms: 2
+ *                     areaSqm: 160.0
+ *                     furnished: false
+ *                     isAvailable: true
+ *                     status: "APPROVED"
+ *                     viewCount: 156
+ *                     averageRating: 4.3
+ *                     totalRatings: 12
+ *                     isFavorited: false
+ *                     favoriteCount: 8
+ *                     images: [
+ *                       "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800",
+ *                       "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800"
+ *                     ]
+ *                     propertyType:
+ *                       code: "APARTMENT"
+ *                       name: "Apartment"
+ *                     amenities: [
+ *                       {
+ *                         amenity: {
+ *                           name: "Air Conditioning"
+ *                           category: "COMFORT"
+ *                         }
+ *                       }
+ *                     ]
+ *                     owner:
+ *                       name: "John Doe"
+ *                       email: "landlord@example.com"
+ *                     createdAt: "2025-09-19T08:30:45.123Z"
+ *                     updatedAt: "2025-09-19T10:15:22.456Z"
  *       404:
  *         description: Property not found
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /api/properties/my-properties:
+ *   get:
+ *     summary: Get properties owned by the authenticated user
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED]
+ *         description: Filter by property status
+ *       - in: query
+ *         name: isAvailable
+ *         schema:
+ *           type: boolean
+ *         description: Filter by availability status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in property title and description
+ *     responses:
+ *       200:
+ *         description: User's properties retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Your properties retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     properties:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Property'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                         total:
+ *                           type: integer
+ *                           example: 25
+ *                         pages:
+ *                           type: integer
+ *                           example: 3
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 25
+ *                         byStatus:
+ *                           type: object
+ *                           properties:
+ *                             DRAFT:
+ *                               type: integer
+ *                               example: 3
+ *                             PENDING_REVIEW:
+ *                               type: integer
+ *                               example: 5
+ *                             APPROVED:
+ *                               type: integer
+ *                               example: 15
+ *                             REJECTED:
+ *                               type: integer
+ *                               example: 2
+ *                         available:
+ *                           type: integer
+ *                           example: 18
+ *                         unavailable:
+ *                           type: integer
+ *                           example: 7
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/my-properties', auth, propertiesController.getMyProperties);
+
 router.get('/:id', propertiesController.getPropertyById);
 
 /**
@@ -645,6 +941,38 @@ router.get('/:id', propertiesController.getPropertyById);
  *                   type: string
  *                   format: uuid
  *                 description: Array of amenity IDs
+ *             example:
+ *               title: "Luxury Penthouse in KLCC"
+ *               description: "Stunning 3-bedroom penthouse with panoramic city views in the heart of Kuala Lumpur City Centre. Features premium finishes, private balcony, and access to world-class amenities including infinity pool, gym, and concierge service."
+ *               address: "Jalan Pinang, KLCC"
+ *               city: "Kuala Lumpur"
+ *               state: "Kuala Lumpur"
+ *               country: "MY"
+ *               zipCode: "50450"
+ *               latitude: 3.1516
+ *               longitude: 101.7121
+ *               placeId: "ChIJ5-U6m9w61TERqB3wOx4BKYw"
+ *               price: 8500.00
+ *               currencyCode: "MYR"
+ *               propertyTypeId: "cltxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+ *               bedrooms: 3
+ *               bathrooms: 3
+ *               areaSqm: 180.0
+ *               furnished: true
+ *               isAvailable: true
+ *               status: "PENDING_REVIEW"
+ *               images: [
+ *                 "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800",
+ *                 "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800",
+ *                 "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800"
+ *               ]
+ *               amenityIds: [
+ *                 "amenity-ac-001",
+ *                 "amenity-pool-001",
+ *                 "amenity-gym-001",
+ *                 "amenity-security-001",
+ *                 "amenity-parking-001"
+ *               ]
  *     responses:
  *       201:
  *         description: Property created successfully
@@ -662,6 +990,32 @@ router.get('/:id', propertiesController.getPropertyById);
  *                   properties:
  *                     property:
  *                       $ref: '#/components/schemas/Property'
+ *             example:
+ *               success: true
+ *               message: "Property created successfully"
+ *               data:
+ *                 property:
+ *                   id: "b7888672-5b55-4f46-b176-faccce4a1648"
+ *                   code: "PROP-KL-026"
+ *                   title: "Luxury Penthouse in KLCC"
+ *                   description: "Stunning 3-bedroom penthouse with panoramic city views"
+ *                   address: "Jalan Pinang, KLCC"
+ *                   city: "Kuala Lumpur"
+ *                   state: "Kuala Lumpur"
+ *                   country: "MY"
+ *                   zipCode: "50450"
+ *                   latitude: 3.1516
+ *                   longitude: 101.7121
+ *                   price: 8500.00
+ *                   currencyCode: "MYR"
+ *                   bedrooms: 3
+ *                   bathrooms: 3
+ *                   areaSqm: 180.0
+ *                   furnished: true
+ *                   isAvailable: true
+ *                   status: "PENDING_REVIEW"
+ *                   createdAt: "2025-01-21T10:30:00Z"
+ *                   updatedAt: "2025-01-21T10:30:00Z"
  *       400:
  *         description: Bad request
  *       401:
@@ -797,6 +1151,13 @@ router.post(
  *                   type: string
  *                   format: uuid
  *                 description: Array of amenity IDs
+ *           example:
+ *             title: "Luxury Penthouse in KLCC - UPDATED"
+ *             description: "Stunning 3-bedroom penthouse with panoramic city views in the heart of Kuala Lumpur City Centre. Recently renovated with premium finishes, private balcony, and access to world-class amenities."
+ *             price: 9000.00
+ *             furnished: true
+ *             isAvailable: false
+ *             status: "APPROVED"
  *     responses:
  *       200:
  *         description: Property updated successfully
@@ -814,6 +1175,36 @@ router.post(
  *                   properties:
  *                     property:
  *                       $ref: '#/components/schemas/Property'
+ *             example:
+ *               success: true
+ *               message: "Property updated successfully"
+ *               data:
+ *                 property:
+ *                   id: "b7888672-5b55-4f46-b176-faccce4a1648"
+ *                   code: "PROP-KL-026"
+ *                   title: "Luxury Penthouse in KLCC - UPDATED"
+ *                   description: "Stunning 3-bedroom penthouse with panoramic city views in the heart of Kuala Lumpur City Centre. Recently renovated with premium finishes, private balcony, and access to world-class amenities."
+ *                   address: "Jalan Pinang, KLCC"
+ *                   city: "Kuala Lumpur"
+ *                   state: "Kuala Lumpur"
+ *                   country: "MY"
+ *                   zipCode: "50450"
+ *                   price: 9000.00
+ *                   currencyCode: "MYR"
+ *                   bedrooms: 3
+ *                   bathrooms: 3
+ *                   areaSqm: 180.0
+ *                   furnished: true
+ *                   isAvailable: false
+ *                   status: "APPROVED"
+ *                   propertyType:
+ *                     id: "cltxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+ *                     name: "Condominium"
+ *                   owner:
+ *                     id: "user123"
+ *                     firstName: "Ahmad"
+ *                     lastName: "Rahman"
+ *                   updatedAt: "2025-01-21T11:30:00Z"
  *       400:
  *         description: Bad request
  *       401:
@@ -872,6 +1263,18 @@ router.put(
  *     responses:
  *       200:
  *         description: Property deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *             example:
+ *               success: true
+ *               message: "Property deleted successfully"
  *       401:
  *         description: Unauthorized
  *       403:

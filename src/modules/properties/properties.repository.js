@@ -45,7 +45,8 @@ class PropertiesRepository {
     });
   }
 
-  async count(where = {}) {
+  async count(options = {}) {
+    const { where = {} } = options;
     return await prisma.property.count({ where });
   }
 
@@ -367,6 +368,76 @@ class PropertiesRepository {
         isAvailable: true,
       },
     });
+  }
+
+  // Get counts by status for a specific owner
+  async getStatusCounts(ownerId) {
+    const statusCounts = await prisma.property.groupBy({
+      by: ['status'],
+      where: {
+        ownerId: ownerId,
+      },
+      _count: {
+        status: true,
+      },
+    });
+
+    // Transform to object format
+    const result = {
+      DRAFT: 0,
+      PENDING_REVIEW: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      ARCHIVED: 0,
+    };
+
+    statusCounts.forEach(item => {
+      result[item.status] = item._count.status;
+    });
+
+    return result;
+  }
+
+  // Get counts by availability for a specific owner
+  async getAvailabilityCounts(ownerId) {
+    const availabilityCounts = await prisma.property.groupBy({
+      by: ['isAvailable'],
+      where: {
+        ownerId: ownerId,
+      },
+      _count: {
+        isAvailable: true,
+      },
+    });
+
+    const result = {
+      available: 0,
+      unavailable: 0,
+    };
+
+    availabilityCounts.forEach(item => {
+      if (item.isAvailable) {
+        result.available = item._count.isAvailable;
+      } else {
+        result.unavailable = item._count.isAvailable;
+      }
+    });
+
+    return result;
+  }
+
+  // Get average rating for a property
+  async getAverageRating(propertyId) {
+    const result = await prisma.propertyRating.aggregate({
+      where: {
+        propertyId: propertyId,
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
+    return result._avg.rating || 0;
   }
 }
 

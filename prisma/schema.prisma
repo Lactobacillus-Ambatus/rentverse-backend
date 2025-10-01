@@ -15,6 +15,7 @@ model PropertyType {
   code        String     @unique
   name        String
   description String?
+  icon        String?    // Icon URL or icon class name
   isActive    Boolean    @default(true)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

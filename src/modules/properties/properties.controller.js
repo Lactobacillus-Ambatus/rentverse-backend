@@ -454,6 +454,42 @@ class PropertiesController {
       });
     }
   }
+
+  // Get properties owned by authenticated user
+  async getMyProperties(req, res) {
+    try {
+      const userId = req.user.id; // User ID from auth middleware
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const filters = {
+        status: req.query.status,
+        isAvailable: req.query.isAvailable
+          ? req.query.isAvailable === 'true'
+          : undefined,
+        search: req.query.search,
+      };
+
+      const result = await propertiesService.getMyProperties(
+        userId,
+        page,
+        limit,
+        filters
+      );
+
+      res.json({
+        success: true,
+        message: 'Your properties retrieved successfully',
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get my properties error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
 }
 
 module.exports = new PropertiesController();
