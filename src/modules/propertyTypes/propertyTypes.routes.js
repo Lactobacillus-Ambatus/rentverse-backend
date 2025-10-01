@@ -24,6 +24,9 @@ const router = express.Router();
  *         description:
  *           type: string
  *           description: The description of the property type
+ *         icon:
+ *           type: string
+ *           description: Icon emoji or class for the property type
  *         isActive:
  *           type: boolean
  *           description: Whether the property type is active
@@ -38,11 +41,12 @@ const router = express.Router();
  *       example:
  *         id: "123e4567-e89b-12d3-a456-426614174000"
  *         code: "APARTMENT"
- *         name: "Apartemen"
- *         description: "Unit hunian dalam bangunan bertingkat"
+ *         name: "Apartment"
+ *         description: "High-rise residential unit in apartment building"
+ *         icon: "🏢"
  *         isActive: true
- *         createdAt: 2023-01-01T00:00:00.000Z
- *         updatedAt: 2023-01-01T00:00:00.000Z
+ *         createdAt: "2025-10-01T16:09:59.265Z"
+ *         updatedAt: "2025-10-01T17:15:08.168Z"
  */
 
 /**
@@ -168,10 +172,19 @@ router.get('/:id', propertyTypesController.getById);
  *               description:
  *                 type: string
  *                 description: Description of the property type
+ *               icon:
+ *                 type: string
+ *                 description: Icon emoji or class for the property type
  *               isActive:
  *                 type: boolean
  *                 default: true
  *                 description: Whether the property type is active
+ *           example:
+ *             code: "SHOPHOUSE"
+ *             name: "Shophouse"
+ *             description: "Traditional mixed-use building with commercial ground floor"
+ *             icon: "🏪"
+ *             isActive: true
  *     responses:
  *       201:
  *         description: Property type created successfully
@@ -253,9 +266,17 @@ router.post(
  *               description:
  *                 type: string
  *                 description: Description of the property type
+ *               icon:
+ *                 type: string
+ *                 description: Icon emoji or class for the property type
  *               isActive:
  *                 type: boolean
  *                 description: Whether the property type is active
+ *           example:
+ *             name: "Shophouse"
+ *             description: "Traditional mixed-use building with commercial ground floor and residential upper floors"
+ *             icon: "🏪"
+ *             isActive: true
  *     responses:
  *       200:
  *         description: Property type updated successfully

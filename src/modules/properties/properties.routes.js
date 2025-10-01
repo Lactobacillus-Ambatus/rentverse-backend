@@ -727,6 +727,117 @@ router.get('/geojson', propertiesController.getGeoJSON);
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /api/properties/my-properties:
+ *   get:
+ *     summary: Get properties owned by the authenticated user
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED]
+ *         description: Filter by property status
+ *       - in: query
+ *         name: isAvailable
+ *         schema:
+ *           type: boolean
+ *         description: Filter by availability status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in property title and description
+ *     responses:
+ *       200:
+ *         description: User's properties retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Your properties retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     properties:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Property'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                         total:
+ *                           type: integer
+ *                           example: 25
+ *                         pages:
+ *                           type: integer
+ *                           example: 3
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 25
+ *                         byStatus:
+ *                           type: object
+ *                           properties:
+ *                             DRAFT:
+ *                               type: integer
+ *                               example: 3
+ *                             PENDING_REVIEW:
+ *                               type: integer
+ *                               example: 5
+ *                             APPROVED:
+ *                               type: integer
+ *                               example: 15
+ *                             REJECTED:
+ *                               type: integer
+ *                               example: 2
+ *                         available:
+ *                           type: integer
+ *                           example: 18
+ *                         unavailable:
+ *                           type: integer
+ *                           example: 7
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/my-properties', auth, propertiesController.getMyProperties);
+
 router.get('/:id', propertiesController.getPropertyById);
 
 /**

@@ -1064,6 +1064,143 @@ class PropertiesService {
       approvals,
     };
   }
+
+  async getMyProperties(userId, page = 1, limit = 10, filters = {}) {
+    try {
+      // Build where clause
+      const whereClause = {
+        ownerId: userId, // Filter by owner (authenticated user)
+      };
+
+      // Add status filter if provided
+      if (filters.status) {
+        whereClause.status = filters.status;
+      }
+
+      // Add availability filter if provided
+      if (filters.isAvailable !== undefined) {
+        whereClause.isAvailable = filters.isAvailable;
+      }
+
+      // Add search filter if provided
+      if (filters.search) {
+        whereClause.OR = [
+          {
+            title: {
+              contains: filters.search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            description: {
+              contains: filters.search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            address: {
+              contains: filters.search,
+              mode: 'insensitive',
+            },
+          },
+        ];
+      }
+
+      // Get total count for pagination
+      const total = await propertiesRepository.count({
+        where: whereClause,
+      });
+
+      // Get properties with pagination using Prisma directly
+      const properties = await prisma.property.findMany({
+        where: whereClause,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          propertyType: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              icon: true,
+            },
+          },
+          amenities: {
+            include: {
+              amenity: {
+                select: {
+                  id: true,
+                  name: true,
+                  category: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      });
+
+      // Transform properties to include computed fields
+      const transformedProperties = await Promise.all(
+        properties.map(async property => {
+          // Add maps URL
+          const propertyWithMaps = this.addMapsUrlToProperty(property);
+
+          // Get view count
+          const viewCount = await this.propertyViewsRepository.getViewCount(
+            property.id
+          );
+
+          // Get average rating
+          const ratingsCount = property._count?.ratings || 0;
+          const averageRating =
+            ratingsCount > 0
+              ? await propertiesRepository.getAverageRating(property.id)
+              : 0;
+
+          return {
+            ...propertyWithMaps,
+            amenities: property.amenities?.map(pa => pa.amenity) || [],
+            viewCount,
+            averageRating: parseFloat(averageRating.toFixed(1)),
+            totalRatings: ratingsCount,
+            totalLeases: property._count?.leases || 0,
+            favoriteCount: property._count?.favorites || 0,
+            // Remove the _count object as we've extracted the data
+            _count: undefined,
+          };
+        })
+      );
+
+      // Get summary statistics
+      const statusCounts = await propertiesRepository.getStatusCounts(userId);
+      const availabilityCounts =
+        await propertiesRepository.getAvailabilityCounts(userId);
+
+      const pagination = {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      };
+
+      const summary = {
+        total,
+        byStatus: statusCounts,
+        available: availabilityCounts.available || 0,
+        unavailable: availabilityCounts.unavailable || 0,
+      };
+
+      return {
+        properties: transformedProperties,
+        pagination,
+        summary,
+      };
+    } catch (error) {
+      console.error('Error in getMyProperties:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new PropertiesService();

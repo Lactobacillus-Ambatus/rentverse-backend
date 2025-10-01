@@ -5,42 +5,49 @@ const propertyTypes = [
     code: 'APARTMENT',
     name: 'Apartment',
     description: 'High-rise residential unit in apartment building',
+    icon: '🏢',
     isActive: true
   },
   {
     code: 'CONDOMINIUM',
     name: 'Condominium', 
     description: 'Luxury residential unit with premium facilities and amenities',
+    icon: '🏘️',
     isActive: true
   },
   {
     code: 'HOUSE',
     name: 'House',
     description: 'Standalone landed residential property',
+    icon: '🏠',
     isActive: true
   },
   {
     code: 'TOWNHOUSE',
     name: 'Townhouse',
     description: 'Multi-level landed property in planned development',
+    icon: '🏘️',
     isActive: true
   },
   {
     code: 'STUDIO',
     name: 'Studio',
     description: 'Open-concept single room residential unit',
+    icon: '🏠',
     isActive: true
   },
   {
     code: 'PENTHOUSE',
     name: 'Penthouse',
     description: 'Luxury apartment on the top floor with premium amenities',
+    icon: '🏢',
     isActive: true
   },
   {
     code: 'VILLA',
     name: 'Villa',
     description: 'Luxurious single-family home with extensive grounds',
+    icon: '🏡',
     isActive: true
   }
 ];
@@ -60,6 +67,7 @@ async function seedPropertyTypes() {
           update: {
             name: typeData.name,
             description: typeData.description,
+            icon: typeData.icon,
             isActive: typeData.isActive
           },
           create: typeData
