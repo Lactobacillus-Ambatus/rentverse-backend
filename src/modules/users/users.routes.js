@@ -204,7 +204,140 @@ router.post(
   ],
   usersController.createUser
 );
+/**
+ * @swagger
+ * /api/users/profile:
+ *   get:
+ *     summary: Get current user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/profile', auth, usersController.getProfile);
 
+/**
+ * @swagger
+ * /api/users/profile:
+ *   patch:
+ *     summary: Update current user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 description: First name of the user
+ *               lastName:
+ *                 type: string
+ *                 description: Last name of the user
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 description: Date of birth (accepts YYYY-MM-DD, ISO-8601 DateTime, or timestamp)
+ *               phone:
+ *                 type: string
+ *                 description: Phone number
+ *               profilePicture:
+ *                 type: string
+ *                 description: URL of profile picture
+ *             example:
+ *               firstName: John
+ *               lastName: Doe
+ *               dateOfBirth: "1990-01-15"
+ *               phone: "+1234567890"
+ *               profilePicture: "https://example.com/profile.jpg"
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation errors
+ *       401:
+ *         description: Unauthorized
+ */
+router.patch(
+  '/profile',
+  auth,
+  [
+    body('firstName').optional().trim().notEmpty(),
+    body('lastName').optional().trim().notEmpty(),
+    body('dateOfBirth')
+      .optional()
+      .custom(value => {
+        if (!value) return true; // Allow empty/null values
+
+        // Try to parse the date
+        let parsedDate;
+
+        // If it's already a valid ISO string, use it
+        if (typeof value === 'string' && value.includes('T')) {
+          parsedDate = new Date(value);
+        }
+        // If it's a date string like "1990-01-01" or "1990/01/01"
+        else if (typeof value === 'string') {
+          parsedDate = new Date(value + 'T00:00:00.000Z');
+        }
+        // If it's already a Date object
+        else if (value instanceof Date) {
+          parsedDate = value;
+        }
+        // If it's a timestamp
+        else if (typeof value === 'number') {
+          parsedDate = new Date(value);
+        }
+
+        if (!parsedDate || isNaN(parsedDate.getTime())) {
+          throw new Error(
+            'Invalid date format. Please use YYYY-MM-DD format or ISO-8601 DateTime string.'
+          );
+        }
+
+        return true;
+      }),
+    body('phone').optional().trim(),
+    body('profilePicture')
+      .optional()
+      .isURL()
+      .withMessage('Profile picture must be a valid URL'),
+  ],
+  usersController.updateProfile
+);
 /**
  * @swagger
  * /api/users:
@@ -412,108 +545,5 @@ router.patch(
  *         description: User not found
  */
 router.delete('/:id', auth, authorize('ADMIN'), usersController.deleteUser);
-
-/**
- * @swagger
- * /api/users/profile:
- *   get:
- *     summary: Get current user's profile
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
- *       401:
- *         description: Unauthorized
- */
-router.get('/profile', auth, usersController.getProfile);
-
-/**
- * @swagger
- * /api/users/profile:
- *   patch:
- *     summary: Update current user's profile
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               firstName:
- *                 type: string
- *                 description: First name of the user
- *               lastName:
- *                 type: string
- *                 description: Last name of the user
- *               dateOfBirth:
- *                 type: string
- *                 format: date
- *                 description: Date of birth
- *               phone:
- *                 type: string
- *                 description: Phone number
- *               profilePicture:
- *                 type: string
- *                 description: URL of profile picture
- *             example:
- *               firstName: John
- *               lastName: Doe
- *               dateOfBirth: 1990-01-15
- *               phone: "+1234567890"
- *               profilePicture: "https://example.com/profile.jpg"
- *     responses:
- *       200:
- *         description: Profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
- *       400:
- *         description: Validation errors
- *       401:
- *         description: Unauthorized
- */
-router.patch(
-  '/profile',
-  auth,
-  [
-    body('firstName').optional().trim().notEmpty(),
-    body('lastName').optional().trim().notEmpty(),
-    body('dateOfBirth').optional().isISO8601(),
-    body('phone').optional().trim(),
-    body('profilePicture')
-      .optional()
-      .isURL()
-      .withMessage('Profile picture must be a valid URL'),
-  ],
-  usersController.updateProfile
-);
 
 module.exports = router;

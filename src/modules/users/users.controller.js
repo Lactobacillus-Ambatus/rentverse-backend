@@ -228,7 +228,46 @@ class UsersController {
 
       allowedFields.forEach(field => {
         if (updateData[field] !== undefined) {
-          profileUpdateData[field] = updateData[field];
+          if (field === 'dateOfBirth') {
+            // Convert dateOfBirth to proper DateTime format for Prisma
+            const dateValue = updateData[field];
+            if (dateValue) {
+              // Handle different date formats
+              let parsedDate;
+
+              // If it's already a valid ISO string, use it
+              if (typeof dateValue === 'string' && dateValue.includes('T')) {
+                parsedDate = new Date(dateValue);
+              }
+              // If it's a date string like "1990-01-01" or "1990/01/01"
+              else if (typeof dateValue === 'string') {
+                // Add time component to make it a full DateTime
+                parsedDate = new Date(dateValue + 'T00:00:00.000Z');
+              }
+              // If it's already a Date object
+              else if (dateValue instanceof Date) {
+                parsedDate = dateValue;
+              }
+              // If it's a timestamp
+              else if (typeof dateValue === 'number') {
+                parsedDate = new Date(dateValue);
+              }
+
+              // Validate the parsed date
+              if (!parsedDate || isNaN(parsedDate.getTime())) {
+                throw new Error(
+                  'Invalid date format for dateOfBirth. Please use YYYY-MM-DD format or ISO-8601 DateTime string.'
+                );
+              }
+
+              // Store as ISO string for Prisma DateTime
+              profileUpdateData[field] = parsedDate.toISOString();
+            } else {
+              profileUpdateData[field] = null;
+            }
+          } else {
+            profileUpdateData[field] = updateData[field];
+          }
         }
       });
 
