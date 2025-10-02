@@ -838,6 +838,14 @@ router.get('/geojson', propertiesController.getGeoJSON);
  */
 router.get('/my-properties', auth, propertiesController.getMyProperties);
 
+// Admin approval endpoints - must be before /:id route
+router.get(
+  '/pending-approval',
+  auth,
+  authorize('ADMIN'),
+  propertiesController.getPendingApprovals
+);
+
 router.get('/:id', propertiesController.getPropertyById);
 
 /**
@@ -1910,40 +1918,7 @@ router.get(
 router.get('/:id/favorite-stats', propertyViewsController.getFavoriteStats);
 
 // ========== ADMIN APPROVAL ENDPOINTS ==========
-
-/**
- * @swagger
- * /api/properties/pending-approval:
- *   get:
- *     summary: Get properties pending approval (Admin only)
- *     tags: [Properties]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Number of items per page
- *     responses:
- *       200:
- *         description: Pending properties retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin access required
- */
-router.get(
-  '/pending-approval',
-  auth,
-  authorize('ADMIN'),
-  propertiesController.getPendingApprovals
-);
+// Note: pending-approval route moved above /:id route to avoid routing conflicts
 
 /**
  * @swagger

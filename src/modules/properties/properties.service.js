@@ -902,47 +902,62 @@ class PropertiesService {
 
   // Get pending approvals (admin only)
   async getPendingApprovals(page = 1, limit = 10) {
+    console.log(
+      '🔍 getPendingApprovals called with page:',
+      page,
+      'limit:',
+      limit
+    );
+
     const skip = (page - 1) * limit;
 
-    const [approvals, total] = await Promise.all([
-      prisma.listingApproval.findMany({
-        where: { status: 'PENDING' },
-        include: {
-          property: {
-            include: {
-              owner: {
-                select: {
-                  id: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true,
-                  name: true,
+    try {
+      const [approvals, total] = await Promise.all([
+        prisma.listingApproval.findMany({
+          where: { status: 'PENDING' },
+          include: {
+            property: {
+              include: {
+                owner: {
+                  select: {
+                    id: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true,
+                    name: true,
+                  },
                 },
+                propertyType: true,
               },
-              propertyType: true,
             },
           },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.listingApproval.count({
+          where: { status: 'PENDING' },
+        }),
+      ]);
+
+      console.log('📊 Found approvals:', approvals.length, 'total:', total);
+      console.log('📋 Approvals data:', JSON.stringify(approvals, null, 2));
+
+      const pages = Math.ceil(total / limit);
+
+      return {
+        approvals,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages,
         },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      prisma.listingApproval.count({
-        where: { status: 'PENDING' },
-      }),
-    ]);
-
-    const pages = Math.ceil(total / limit);
-
-    return {
-      approvals,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages,
-      },
-    };
+      };
+    } catch (error) {
+      console.error('❌ Error in getPendingApprovals:', error);
+      throw error;
+    }
   }
 
   // Approve property (admin only)

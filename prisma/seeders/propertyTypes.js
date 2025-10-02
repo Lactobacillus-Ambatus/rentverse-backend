@@ -5,52 +5,53 @@ const propertyTypes = [
     code: 'APARTMENT',
     name: 'Apartment',
     description: 'High-rise residential unit in apartment building',
-    icon: '🏢',
+    icon: '🏢', // gedung tinggi
     isActive: true
   },
   {
     code: 'CONDOMINIUM',
     name: 'Condominium', 
     description: 'Luxury residential unit with premium facilities and amenities',
-    icon: '🏘️',
+    icon: '🏙️', // skyline mewah
     isActive: true
   },
   {
     code: 'HOUSE',
     name: 'House',
     description: 'Standalone landed residential property',
-    icon: '🏠',
+    icon: '🏠', // rumah biasa
     isActive: true
   },
   {
     code: 'TOWNHOUSE',
     name: 'Townhouse',
     description: 'Multi-level landed property in planned development',
-    icon: '🏘️',
+    icon: '🏘️', // kompleks rumah
     isActive: true
   },
   {
     code: 'STUDIO',
     name: 'Studio',
     description: 'Open-concept single room residential unit',
-    icon: '🏠',
+    icon: '🎛️', // studio/ruang tunggal
     isActive: true
   },
   {
     code: 'PENTHOUSE',
     name: 'Penthouse',
     description: 'Luxury apartment on the top floor with premium amenities',
-    icon: '🏢',
+    icon: '🌆', // pemandangan atap kota
     isActive: true
   },
   {
     code: 'VILLA',
     name: 'Villa',
     description: 'Luxurious single-family home with extensive grounds',
-    icon: '🏡',
+    icon: '🏡', // villa dengan halaman
     isActive: true
   }
 ];
+
 
 async function seedPropertyTypes() {
   console.log('🏠 Starting property types seeding...');
