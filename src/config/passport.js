@@ -86,6 +86,23 @@ passport.use(
                 createdAt: true,
               },
             });
+          } else {
+            // Just return user with updated select fields for consistency
+            user = await prisma.user.findUnique({
+              where: { id: user.id },
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                name: true,
+                phone: true,
+                profilePicture: true,
+                role: true,
+                isActive: true,
+                createdAt: true,
+              },
+            });
           }
         } else {
           // Create new user
@@ -143,13 +160,16 @@ passport.use(
       clientID: process.env.FACEBOOK_APP_ID,
       clientSecret: process.env.FACEBOOK_APP_SECRET,
       callbackURL: `${process.env.BASE_URL}/api/auth/facebook/callback`,
-      profileFields: ['id', 'emails', 'name'],
+      profileFields: ['id', 'emails', 'name', 'picture.type(large)'],
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0]?.value;
-        const name = `${profile.name.givenName} ${profile.name.familyName}`;
+        const firstName = profile.name.givenName || '';
+        const lastName = profile.name.familyName || '';
+        const name = `${firstName} ${lastName}`.trim();
         const facebookId = profile.id;
+        const profilePicture = profile.photos?.[0]?.value || null;
 
         if (!email) {
           return done(new Error('No email found from Facebook profile'), null);
@@ -161,16 +181,27 @@ passport.use(
         });
 
         if (user) {
-          // User exists, update Facebook ID if not set
+          // User exists, update Facebook ID and profile picture if not set
+          const updateData = {};
           if (!user.facebookId) {
+            updateData.facebookId = facebookId;
+          }
+          if (!user.profilePicture && profilePicture) {
+            updateData.profilePicture = profilePicture;
+          }
+
+          if (Object.keys(updateData).length > 0) {
             user = await prisma.user.update({
               where: { id: user.id },
-              data: { facebookId },
+              data: updateData,
               select: {
                 id: true,
                 email: true,
+                firstName: true,
+                lastName: true,
                 name: true,
                 phone: true,
+                profilePicture: true,
                 role: true,
                 isActive: true,
                 createdAt: true,
@@ -187,18 +218,24 @@ passport.use(
           user = await prisma.user.create({
             data: {
               email,
+              firstName,
+              lastName,
               name,
               password: randomPassword,
               facebookId,
-              role: 'TENANT',
+              profilePicture,
+              role: 'USER',
               isActive: true,
               verifiedAt: new Date(),
             },
             select: {
               id: true,
               email: true,
+              firstName: true,
+              lastName: true,
               name: true,
               phone: true,
+              profilePicture: true,
               role: true,
               isActive: true,
               createdAt: true,
@@ -312,7 +349,7 @@ passport.use(
             name,
             password: randomPassword,
             githubId,
-            role: 'TENANT',
+            role: 'USER',
             isActive: true,
             verifiedAt: new Date(),
           },
@@ -390,7 +427,7 @@ passport.use(
               name,
               password: randomPassword,
               twitterId,
-              role: 'TENANT',
+              role: 'USER',
               isActive: true,
               verifiedAt: new Date(),
             },
@@ -477,7 +514,7 @@ const handleAppleSignIn = async (appleToken, userInfo = null) => {
           name,
           password: randomPassword,
           appleId,
-          role: 'TENANT',
+          role: 'USER',
           isActive: true,
           verifiedAt: new Date(),
         },
