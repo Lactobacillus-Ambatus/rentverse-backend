@@ -82,9 +82,9 @@ model Property {
   city           String
   state          String
   zipCode        String
-  country        String                   @default("ID")
+  country        String                   @default("MY")
   price          Decimal                  @db.Decimal(12, 2)
-  currencyCode   String                   @default("IDR")
+  currencyCode   String                   @default("MYR")
   bedrooms       Int                      @default(0)
   bathrooms      Int                      @default(0)
   areaSqm        Float?

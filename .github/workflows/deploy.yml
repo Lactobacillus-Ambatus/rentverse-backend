@@ -20,4 +20,5 @@ jobs:
             cd /root/project/rentverse-backend
             git pull
             npm i --omit=dev
+            npx prisma generate
             pm2 restart rentverse-backend
