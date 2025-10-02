@@ -251,6 +251,13 @@ class PropertiesService {
   }
 
   async createProperty(propertyData, ownerId) {
+    // 🆕 Check auto-approve status
+    const PropertiesController = require('./properties.controller');
+    const autoApproveStatus =
+      PropertiesController.constructor.getAutoApproveStatus();
+
+    console.log('🔍 Property auto-approve status:', autoApproveStatus);
+
     // Generate unique property code if not provided
     let propertyCode = propertyData.code;
     if (!propertyCode) {
@@ -269,6 +276,17 @@ class PropertiesService {
         propertyTypeCode,
         code => propertiesRepository.codeExists(code)
       );
+    }
+
+    // 🆕 Determine status based on auto-approve setting
+    let propertyStatus = 'PENDING_REVIEW'; // Default
+    if (autoApproveStatus.isEnabled) {
+      propertyStatus = 'APPROVED'; // Auto-approve enabled
+      console.log(
+        '✅ Auto-approve is ON - Property will be approved automatically'
+      );
+    } else {
+      console.log('⏳ Auto-approve is OFF - Property requires manual approval');
     }
 
     const cleanPropertyData = {
@@ -297,7 +315,7 @@ class PropertiesService {
         propertyData.isAvailable !== undefined
           ? propertyData.isAvailable
           : true,
-      status: propertyData.status || 'PENDING_REVIEW', // Default to PENDING_REVIEW for approval workflow
+      status: propertyData.status || propertyStatus, // 🆕 Use auto-approve logic
       images: propertyData.images || [],
       propertyTypeId: propertyData.propertyTypeId,
       ownerId,
@@ -339,14 +357,28 @@ class PropertiesService {
         });
       }
 
-      // Auto create approval record if status is PENDING_REVIEW
+      // 🆕 Handle approval record based on auto-approve status
       if (property.status === 'PENDING_REVIEW') {
+        // Manual approval required - create PENDING approval record
         await tx.listingApproval.create({
           data: {
             propertyId: property.id,
             status: 'PENDING',
           },
         });
+        console.log('📝 Created PENDING approval record for manual review');
+      } else if (property.status === 'APPROVED') {
+        // Auto-approved - create APPROVED approval record
+        await tx.listingApproval.create({
+          data: {
+            propertyId: property.id,
+            status: 'APPROVED',
+            reviewerId: null, // System auto-approval
+            notes: 'Auto-approved by system (auto-approve enabled)',
+            reviewedAt: new Date(),
+          },
+        });
+        console.log('✅ Created APPROVED approval record (auto-approved)');
       }
 
       return property;
@@ -914,7 +946,13 @@ class PropertiesService {
     try {
       const [approvals, total] = await Promise.all([
         prisma.listingApproval.findMany({
-          where: { status: 'PENDING' },
+          where: {
+            status: 'PENDING',
+            // 🆕 Ensure consistency: approval status PENDING AND property status PENDING_REVIEW
+            property: {
+              status: 'PENDING_REVIEW',
+            },
+          },
           include: {
             property: {
               include: {
@@ -936,7 +974,13 @@ class PropertiesService {
           take: limit,
         }),
         prisma.listingApproval.count({
-          where: { status: 'PENDING' },
+          where: {
+            status: 'PENDING',
+            // 🆕 Ensure consistency: approval status PENDING AND property status PENDING_REVIEW
+            property: {
+              status: 'PENDING_REVIEW',
+            },
+          },
         }),
       ]);
 
@@ -1078,6 +1122,78 @@ class PropertiesService {
       propertyId,
       approvals,
     };
+  }
+
+  // 🆕 Fix data inconsistency between properties and listing_approvals
+  async fixApprovalDataInconsistency() {
+    console.log('🔧 Starting approval data consistency fix...');
+
+    try {
+      // Find all inconsistent records where property is APPROVED but approval is still PENDING
+      const inconsistentApprovals = await prisma.listingApproval.findMany({
+        where: {
+          status: 'PENDING',
+          property: {
+            status: 'APPROVED',
+          },
+        },
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      console.log(
+        `🔍 Found ${inconsistentApprovals.length} inconsistent approval records`
+      );
+
+      if (inconsistentApprovals.length > 0) {
+        // Update all inconsistent approval records to APPROVED
+        const updatePromises = inconsistentApprovals.map(approval =>
+          prisma.listingApproval.update({
+            where: { id: approval.id },
+            data: {
+              status: 'APPROVED',
+              reviewerId: null, // System fix
+              notes:
+                'Auto-fixed: Property was already approved but approval record was still pending',
+              reviewedAt: new Date(),
+            },
+          })
+        );
+
+        await Promise.all(updatePromises);
+        console.log(
+          `✅ Fixed ${inconsistentApprovals.length} inconsistent approval records`
+        );
+
+        return {
+          fixed: true,
+          count: inconsistentApprovals.length,
+          records: inconsistentApprovals.map(a => ({
+            propertyId: a.propertyId,
+            propertyTitle: a.property.title,
+            oldApprovalStatus: 'PENDING',
+            newApprovalStatus: 'APPROVED',
+          })),
+        };
+      } else {
+        console.log('✅ No inconsistent data found');
+        return {
+          fixed: false,
+          count: 0,
+          message: 'No inconsistent data found',
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error fixing approval data inconsistency:', error);
+      throw error;
+    }
   }
 
   async getMyProperties(userId, page = 1, limit = 10, filters = {}) {

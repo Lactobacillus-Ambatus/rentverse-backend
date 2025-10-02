@@ -2035,4 +2035,175 @@ router.get(
   propertiesController.getApprovalHistory
 );
 
+// ========== PROPERTY AUTO-APPROVE ENDPOINTS ==========
+
+/**
+ * @swagger
+ * /api/properties/auto-approve/toggle:
+ *   post:
+ *     summary: Toggle property auto-approve status (Admin only)
+ *     tags: [Properties - Auto Approve]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - enabled
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *                 description: Enable or disable auto-approve for new properties
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Auto-approve status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Property auto-approve enabled successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: object
+ *                       properties:
+ *                         isEnabled:
+ *                           type: boolean
+ *                           example: true
+ *                         lastUpdated:
+ *                           type: string
+ *                           format: date-time
+ *                         updatedBy:
+ *                           type: string
+ *                           example: "admin@rentverse.com"
+ *       400:
+ *         description: Invalid input - enabled field must be boolean
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+router.post(
+  '/auto-approve/toggle',
+  auth,
+  authorize('ADMIN'),
+  propertiesController.togglePropertyAutoApprove
+);
+
+/**
+ * @swagger
+ * /api/properties/auto-approve/status:
+ *   get:
+ *     summary: Get property auto-approve status
+ *     tags: [Properties - Auto Approve]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Auto-approve status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: object
+ *                       properties:
+ *                         isEnabled:
+ *                           type: boolean
+ *                           example: false
+ *                         lastUpdated:
+ *                           type: string
+ *                           format: date-time
+ *                         updatedBy:
+ *                           type: string
+ *                           example: "admin@rentverse.com"
+ *                     description:
+ *                       type: string
+ *                       example: "Auto-approve is OFF - New properties require manual approval"
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/auto-approve/status',
+  auth,
+  propertiesController.getPropertyAutoApproveStatus
+);
+
+/**
+ * @swagger
+ * /api/properties/fix-approval-inconsistency:
+ *   post:
+ *     summary: Fix approval data inconsistency (Admin only)
+ *     tags: [Properties - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Fix inconsistent data where property status is APPROVED but approval status is still PENDING
+ *     responses:
+ *       200:
+ *         description: Data inconsistency fixed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Fixed 2 inconsistent approval records"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fixed:
+ *                       type: boolean
+ *                       example: true
+ *                     count:
+ *                       type: number
+ *                       example: 2
+ *                     records:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           propertyId:
+ *                             type: string
+ *                           propertyTitle:
+ *                             type: string
+ *                           oldApprovalStatus:
+ *                             type: string
+ *                             example: "PENDING"
+ *                           newApprovalStatus:
+ *                             type: string
+ *                             example: "APPROVED"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+router.post(
+  '/fix-approval-inconsistency',
+  auth,
+  authorize('ADMIN'),
+  propertiesController.fixApprovalDataInconsistency
+);
+
 module.exports = router;
