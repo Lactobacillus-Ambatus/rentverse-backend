@@ -48,6 +48,7 @@ passport.use(
         const email = profile.emails[0]?.value;
         const name = profile.displayName;
         const googleId = profile.id;
+        const profilePicture = profile.photos[0]?.value || null;
 
         if (!email) {
           return done(new Error('No email found from Google profile'), null);
@@ -59,16 +60,27 @@ passport.use(
         });
 
         if (user) {
-          // User exists, update Google ID if not set
+          // User exists, update Google ID and profile picture if not set
+          const updateData = {};
           if (!user.googleId) {
+            updateData.googleId = googleId;
+          }
+          if (!user.profilePicture && profilePicture) {
+            updateData.profilePicture = profilePicture;
+          }
+
+          if (Object.keys(updateData).length > 0) {
             user = await prisma.user.update({
               where: { id: user.id },
-              data: { googleId },
+              data: updateData,
               select: {
                 id: true,
                 email: true,
+                firstName: true,
+                lastName: true,
                 name: true,
                 phone: true,
+                profilePicture: true,
                 role: true,
                 isActive: true,
                 createdAt: true,
@@ -82,21 +94,32 @@ passport.use(
             12
           );
 
+          // Split name into firstName and lastName
+          const nameParts = name.split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+
           user = await prisma.user.create({
             data: {
               email,
+              firstName,
+              lastName,
               name,
               password: randomPassword,
               googleId,
-              role: 'TENANT',
+              profilePicture,
+              role: 'USER',
               isActive: true,
               verifiedAt: new Date(),
             },
             select: {
               id: true,
               email: true,
+              firstName: true,
+              lastName: true,
               name: true,
               phone: true,
+              profilePicture: true,
               role: true,
               isActive: true,
               createdAt: true,
