@@ -288,7 +288,7 @@ class PropertiesService {
         ? parseFloat(propertyData.longitude)
         : null,
       price: parseFloat(propertyData.price),
-      currencyCode: propertyData.currencyCode || 'IDR',
+      currencyCode: propertyData.currencyCode || 'MYR',
       bedrooms: propertyData.bedrooms || 0,
       bathrooms: propertyData.bathrooms || 0,
       areaSqm: propertyData.areaSqm ? parseFloat(propertyData.areaSqm) : null,
@@ -546,11 +546,11 @@ class PropertiesService {
   }
 
   // Helper method to format price
-  formatPrice(price, currencyCode = 'IDR') {
+  formatPrice(price, currencyCode = 'MYR') {
     const numPrice = parseFloat(price);
 
-    if (currencyCode === 'IDR') {
-      return `Rp ${numPrice.toLocaleString('id-ID')}`;
+    if (currencyCode === 'MYR') {
+      return `RM ${numPrice.toLocaleString('ms-MY')}`;
     } else if (currencyCode === 'USD') {
       return `$${numPrice.toLocaleString('en-US')}`;
     } else {

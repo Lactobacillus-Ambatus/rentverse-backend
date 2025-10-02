@@ -162,7 +162,7 @@ model Lease {
   startDate       DateTime
   endDate         DateTime
   rentAmount      Decimal          @db.Decimal(12, 2)
-  currencyCode    String           @default("IDR")
+  currencyCode    String           @default("MYR")
   securityDeposit Decimal?         @db.Decimal(12, 2)
   status          LeaseStatus      @default(PENDING)
   notes           String?          // Catatan dari user saat booking
@@ -189,7 +189,7 @@ model Invoice {
   leaseId      String
   type         InvoiceType   @default(RENT)
   amount       Decimal       @db.Decimal(12, 2)
-  currencyCode String        @default("IDR")
+  currencyCode String        @default("MYR")
   dueDate      DateTime
   status       InvoiceStatus @default(DUE)
   issuedAt     DateTime      @default(now())

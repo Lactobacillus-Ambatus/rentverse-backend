@@ -110,7 +110,10 @@ class BookingsService {
       throw new Error(`Property is already booked for the selected period`);
     }
 
-    // Create booking
+    // ===========================================
+    // 🆕 AUTO-APPROVE FLOW (New Implementation)
+    // ===========================================
+    // Create booking with APPROVED status (auto-approve)
     const booking = await prisma.lease.create({
       data: {
         propertyId,
@@ -120,7 +123,89 @@ class BookingsService {
         endDate: bookingEndDate,
         rentAmount: parseFloat(rentAmount),
         securityDeposit: securityDeposit ? parseFloat(securityDeposit) : null,
-        status: 'PENDING',
+        status: 'APPROVED', // 🆕 Auto-approve immediately
+        notes: notes || null,
+      },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            address: true,
+            city: true,
+            images: true,
+          },
+        },
+        tenant: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+          },
+        },
+        landlord: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // 🆕 AUTO-GENERATE PDF immediately after booking creation
+    try {
+      console.log(
+        `📄 Auto-generating rental agreement PDF for booking: ${booking.id}`
+      );
+      const pdfResult =
+        await pdfGenerationService.generateAndUploadRentalAgreementPDF(
+          booking.id
+        );
+
+      console.log('✅ Rental agreement PDF auto-generated successfully');
+      console.log('📍 PDF URL:', pdfResult.data.cloudinary.url);
+
+      // Add PDF info to response
+      booking.rentalAgreementPDF = {
+        url: pdfResult.data.cloudinary.url,
+        fileName: pdfResult.data.cloudinary.fileName,
+        generated: true,
+      };
+    } catch (pdfError) {
+      console.error(
+        '❌ Error auto-generating rental agreement PDF:',
+        pdfError.message
+      );
+      // Don't fail the booking if PDF generation fails
+      booking.rentalAgreementPDF = {
+        url: null,
+        error: pdfError.message,
+        generated: false,
+      };
+    }
+
+    return booking;
+
+    // ===========================================
+    // 🔒 OLD MANUAL APPROVAL FLOW (Commented for future implementation)
+    // ===========================================
+    /*
+    // Create booking with PENDING status (requires manual approval)
+    const booking = await prisma.lease.create({
+      data: {
+        propertyId,
+        tenantId: userId,
+        landlordId: property.ownerId,
+        startDate: bookingStartDate,
+        endDate: bookingEndDate,
+        rentAmount: parseFloat(rentAmount),
+        securityDeposit: securityDeposit ? parseFloat(securityDeposit) : null,
+        status: 'PENDING', // Manual approval required
         notes: notes || null,
       },
       include: {
@@ -155,6 +240,7 @@ class BookingsService {
     });
 
     return booking;
+    */
   }
 
   /**
@@ -277,13 +363,14 @@ class BookingsService {
   }
 
   /**
-   * Approve booking (owner only)
+   * 🔒 COMMENTED FOR FUTURE IMPLEMENTATION
+   * Approve booking (owner only) - NOT USED IN AUTO-APPROVE FLOW
    * @param {string} bookingId
    * @param {string} ownerId
    * @param {string} notes - Optional notes
    * @returns {Promise<Object>}
    */
-  async approveBooking(bookingId, ownerId, notes = '') {
+  async approveBooking_OLD_FLOW(bookingId, ownerId, notes = '') {
     // Get booking details
     const booking = await prisma.lease.findUnique({
       where: { id: bookingId },
@@ -396,6 +483,60 @@ class BookingsService {
     }
 
     return approvedBooking;
+  }
+
+  /**
+   * 🆕 AUTO-APPROVE FLOW - No manual approval needed
+   * This method is now disabled since bookings are auto-approved
+   * @param {string} bookingId
+   * @param {string} ownerId
+   * @param {string} notes - Optional notes
+   * @returns {Promise<Object>}
+   */
+  async approveBooking(bookingId, ownerId, notes = '') {
+    // Get booking details to check if it exists
+    const booking = await prisma.lease.findUnique({
+      where: { id: bookingId },
+      include: {
+        property: true,
+        tenant: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    // Check ownership
+    if (booking.landlordId !== ownerId) {
+      throw new Error(
+        'Access denied: You can only manage bookings for your own properties'
+      );
+    }
+
+    // 🆕 Since bookings are auto-approved, this endpoint is no longer needed
+    if (booking.status === 'APPROVED') {
+      return {
+        message:
+          '✅ Booking is already approved! With the new auto-approve system, all bookings are automatically approved upon creation.',
+        booking: booking,
+        autoApproveEnabled: true,
+        needsManualApproval: false,
+      };
+    }
+
+    // If somehow there's a PENDING booking (shouldn't happen with auto-approve)
+    throw new Error(
+      '🔄 Auto-approve is enabled. All new bookings are automatically approved. This booking might be from the old system. Please contact support if needed.'
+    );
   }
 
   /**

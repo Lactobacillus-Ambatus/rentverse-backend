@@ -61,7 +61,7 @@ const router = express.Router();
  *           description: The monthly rent price
  *         currencyCode:
  *           type: string
- *           description: Currency code (e.g., IDR, USD)
+ *           description: Currency code (e.g., MYR, USD)
  *         bedrooms:
  *           type: integer
  *           description: Number of bedrooms
@@ -912,7 +912,7 @@ router.get('/:id', propertiesController.getPropertyById);
  *                 description: Monthly rent price
  *               currencyCode:
  *                 type: string
- *                 description: Currency code (default IDR)
+ *                 description: Currency code (default MYR)
  *               propertyTypeId:
  *                 type: string
  *                 format: uuid
