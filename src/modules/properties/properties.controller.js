@@ -314,18 +314,23 @@ class PropertiesController {
 
   // Get pending approvals (admin only)
   async getPendingApprovals(req, res) {
+    console.log('🚀 getPendingApprovals controller called');
+    console.log('👤 User:', req.user?.email, 'Role:', req.user?.role);
+
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
 
+      console.log('📄 Calling service with page:', page, 'limit:', limit);
       const result = await propertiesService.getPendingApprovals(page, limit);
 
+      console.log('✅ Service returned result:', result);
       res.json({
         success: true,
         data: result,
       });
     } catch (error) {
-      console.error('Get pending approvals error:', error);
+      console.error('❌ Get pending approvals error:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
