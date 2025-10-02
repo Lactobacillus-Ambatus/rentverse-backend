@@ -1,6 +1,13 @@
 const propertiesService = require('./properties.service');
 const { validationResult } = require('express-validator');
 
+// 🆕 AUTO-APPROVE PROPERTIES STATUS GLOBAL
+let propertyAutoApproveStatus = {
+  isEnabled: false, // Default: OFF (manual approval required)
+  lastUpdated: new Date(),
+  updatedBy: null,
+};
+
 class PropertiesController {
   async getAllProperties(req, res) {
     try {
@@ -489,6 +496,105 @@ class PropertiesController {
       });
     } catch (error) {
       console.error('Get my properties error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  // ===============================
+  // 🆕 PROPERTY AUTO-APPROVE METHODS
+  // ===============================
+
+  /**
+   * Toggle property auto-approve status (admin only)
+   */
+  async togglePropertyAutoApprove(req, res) {
+    try {
+      const { enabled } = req.body;
+
+      // Validation
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          message: 'Field "enabled" must be a boolean value',
+        });
+      }
+
+      // Update global status
+      propertyAutoApproveStatus = {
+        isEnabled: enabled,
+        lastUpdated: new Date(),
+        updatedBy: req.user?.email || 'Unknown',
+      };
+
+      const message = enabled
+        ? 'Property auto-approve enabled successfully'
+        : 'Property auto-approve disabled successfully';
+
+      res.json({
+        success: true,
+        message,
+        data: {
+          status: propertyAutoApproveStatus,
+        },
+      });
+    } catch (error) {
+      console.error('Toggle property auto-approve error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  /**
+   * Get property auto-approve status
+   */
+  async getPropertyAutoApproveStatus(req, res) {
+    try {
+      res.json({
+        success: true,
+        data: {
+          status: propertyAutoApproveStatus,
+          description: propertyAutoApproveStatus.isEnabled
+            ? 'Auto-approve is ON - New properties will be automatically approved'
+            : 'Auto-approve is OFF - New properties require manual approval',
+        },
+      });
+    } catch (error) {
+      console.error('Get property auto-approve status error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  }
+
+  /**
+   * Get property auto-approve status for service use
+   */
+  static getAutoApproveStatus() {
+    return propertyAutoApproveStatus;
+  }
+
+  /**
+   * Fix approval data inconsistency (admin only)
+   */
+  async fixApprovalDataInconsistency(req, res) {
+    try {
+      const result = await propertiesService.fixApprovalDataInconsistency();
+
+      res.json({
+        success: true,
+        message: result.fixed
+          ? `Fixed ${result.count} inconsistent approval records`
+          : 'No inconsistent data found',
+        data: result,
+      });
+    } catch (error) {
+      console.error('Fix approval data inconsistency error:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
